@@ -1,0 +1,5 @@
+nob
+nob.old
+scrap
+build/*.o
+.DS_Store
