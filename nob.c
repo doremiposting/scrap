@@ -44,6 +44,8 @@ int
 main(int argc, char *argv[]) {
 	GO_REBUILD_URSELF(argc, argv); 
 
+  if (!mkdir_if_not_exists("./build/")) { return 1; }
+
   boilerplate();
   cmd_append(&cmd, "-lm");
   compilefile("src/gfx.c", "build/gfx.o");
