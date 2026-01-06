@@ -3,8 +3,6 @@
 #include "main.h"
 #include "gfx.h"
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-
 forceinline
 double
 tri2darea(int x1, int y1, int x2, int y2, int x3, int y3) {
@@ -34,11 +32,9 @@ tri2duv(Tri2d t, int x, int y) {
   maxdist = fmax(fmax(d1, d2), d3);
   if (maxdist == 0) { maxdist = 1; }
   
-  r = (int)(0xFF - (d1 * 0xFF / maxdist));
-  g = (int)(0xFF - (d2 * 0xFF / maxdist));
-  b = (int)(0xFF - (d3 * 0xFF / maxdist));
-
-  r %= 0xFF; g %= 0xFF; b %= 0xFF;
+  r = (int)(0xFF - (d1 * 0xFF / maxdist)) % 0xFF;
+  g = (int)(0xFF - (d2 * 0xFF / maxdist)) % 0xFF;
+  b = (int)(0xFF - (d3 * 0xFF / maxdist)) % 0xFF;
 
   color =  ((a << 24) | (r << 16) | (g << 8) | (b));
   return color;

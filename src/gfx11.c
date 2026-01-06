@@ -24,17 +24,14 @@ ginit() {
   cx = WWIDTH/2;
   cy = WHEIGHT/2;
   Tri2d tri = {
-    .x1 = cx - cx/2,
-    .y1 = cy + cy/2,
-    .x2 = cx + cx/2,
-    .y2 = cy + cy/2,
-    .x3 = cx,
-    .y3 = cy - cy/2,
+    .x1 = cx - cx/2,  .y1 = cy + cy/2,
+    .x2 = cx + cx/2,  .y2 = cy + cy/2,
+    .x3 = cx,         .y3 = cy - cy/2,
   };
   pixels = calloc(WWIDTH*WHEIGHT, sizeof(int));
   for (y = 0; y < WWIDTH; y++) {
     for (z = 0; z < WHEIGHT; z++) {
-      pixels[y*WWIDTH+z] = intri2d(tri, y, z) ? tri2duv(tri, y, z) : y*WWIDTH+z;
+      pixels[z*WWIDTH+y] = intri2d(tri, y, z) ? tri2duv(tri, y, z) : y*WWIDTH+z;
     }
   }
   display = XOpenDisplay(NULL);
