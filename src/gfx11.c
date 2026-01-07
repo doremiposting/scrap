@@ -31,7 +31,7 @@ ginit() {
   pixels = calloc(WWIDTH*WHEIGHT, sizeof(int));
   for (y = 0; y < WWIDTH; y++) {
     for (z = 0; z < WHEIGHT; z++) {
-      pixels[z*WWIDTH+y] = intri2d(tri, y, z) ? tri2duv(tri, y, z) : y*WWIDTH+z;
+      pixels[z*WWIDTH+y] = intri2d(tri, y, z) ? tri2drbow(tri, y, z) : z*WWIDTH+y;
     }
   }
   display = XOpenDisplay(NULL);

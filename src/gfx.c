@@ -18,7 +18,7 @@ intri2d(Tri2d t, int x, int y) {
 }
 
 int
-tri2duv(Tri2d t, int x, int y) {
+tri2drbow(Tri2d t, int x, int y) {
   int color;
   int r, g, b, a;
   int d1, d2, d3;
