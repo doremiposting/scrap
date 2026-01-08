@@ -16,24 +16,17 @@ XImage *i;
 int *pixels;
 GC gc;
 Atom wmdelwin;
+Tri2d tri;
 
 void
 ginit() {
-  int y, z;
   int cx, cy;
   cx = WWIDTH/2;
   cy = WHEIGHT/2;
-  Tri2d tri = {
-    .x1 = cx - cx/2,  .y1 = cy + cy/2,
-    .x2 = cx + cx/2,  .y2 = cy + cy/2,
-    .x3 = cx,         .y3 = cy - cy/2,
-  };
+  tri.x1 = cx - cx/2;  tri.y1 = cy + cy/2;
+  tri.x2 = cx + cx/2;  tri.y2 = cy + cy/2;
+  tri.x3 = cx;         tri.y3 = cy - cy/2;
   pixels = calloc(WWIDTH*WHEIGHT, sizeof(int));
-  for (y = 0; y < WWIDTH; y++) {
-    for (z = 0; z < WHEIGHT; z++) {
-      pixels[z*WWIDTH+y] = intri2d(tri, y, z) ? tri2drbow(tri, y, z) : z*WWIDTH+y;
-    }
-  }
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
   window = XCreateSimpleWindow(
@@ -65,8 +58,9 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit;
+  int quit, dorender, xi, yj;
   quit = 0;
+  dorender = 100;
   while (!quit) {
     while (XPending(display) > 0) {
       XNextEvent(display, &ev);
@@ -92,7 +86,16 @@ render() {
 
       }
     }
-    XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
+    /* TODO: Don't just count down from 100, implement an actual tick system */
+    if (!(dorender)) {
+      for (xi = 0; xi < WWIDTH; xi++) {
+        for (yj = 0; yj < WHEIGHT; yj++) {
+          pixels[yj*WWIDTH+xi] = intri2d(tri, xi, yj) ? tri2drbow(tri, xi, yj) : yj*WWIDTH+xi;
+        }
+      }
+      XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
+      dorender = 100;
+    } else { dorender--; }
   }
 }
 

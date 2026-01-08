@@ -9,5 +9,6 @@ typedef struct {
 forceinline double tri2darea(int x1, int y1, int x2, int y2, int x3, int y3);
 int intri2d(Tri2d t, int x, int y);
 int tri2drbow(Tri2d t, int x, int y);
+int tri2dc(Tri2d t, int x, int y, int r, int g, int b);
 
 #endif /* GFXH_H */
