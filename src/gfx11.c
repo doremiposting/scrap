@@ -90,7 +90,7 @@ render() {
     if (!(dorender)) {
       for (xi = 0; xi < WWIDTH; xi++) {
         for (yj = 0; yj < WHEIGHT; yj++) {
-          pixels[yj*WWIDTH+xi] = intri2d(tri, xi, yj) ? tri2drbow(tri, xi, yj) : yj*WWIDTH+xi;
+          pixels[yj*WWIDTH+xi] = intri2d(tri, xi, yj) ? tri2drbary(tri, xi, yj) : yj*WWIDTH+xi;
         }
       }
       XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
@@ -101,6 +101,7 @@ render() {
 
 void
 gkill() {
+  /* TODO: free() roundup from ginit(). */
   XCloseDisplay(display);
   free(pixels);
 }

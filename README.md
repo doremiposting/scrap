@@ -5,4 +5,4 @@ $ gcc -o nob nob.c
 $ ./nob
 ```
 
-<img src="./Screenshot 2026-01-02 at 20.01.50.png">
+<img src="./docres/Screenshot 2026-01-08 at 19.55.02">
