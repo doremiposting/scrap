@@ -63,7 +63,7 @@ main(int argc, char *argv[]) {
   boilerplate();
   compilefile("src/main.c", "build/main.o");
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
-    "-lX11", "-L/opt/X11/lib/",
+    "-lX11", "-L/opt/X11/lib/", "-lm",
     "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o");
 	if (!cmd_run(&cmd)) { return 1; }
 }
