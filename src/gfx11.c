@@ -73,7 +73,7 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit, xi, yj;
+  int quit, xi, yj, evrate;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
   quit = 0;
@@ -110,6 +110,7 @@ render() {
     }
     GETNS(nowe);
     elapsede = DIFFNS(thene, nowe);
+    evrate = 5; /* TODO: Use as rate of draining event buffer. */
     if (elapsede > EVTICKNS) { GETNS(thene); }
 
     GETNS(nowr);
@@ -136,4 +137,20 @@ gkill() {
   /* TODO: free() roundup from ginit(). */
   XCloseDisplay(display);
   free(pixels);
+}
+
+void foo() { printf("hi!\n"); }
+
+static const evhandler evdispatch[NUMEVS] = {
+  [SOMEEV] = foo,
+  [NOTANEV] = NULL
+};
+
+/* TODO: Make an extra file with an extra dispatcher using */
+/* __attribute__(weak) flags as a fallback if one doesn't exist/fails */
+void
+execev(Event e) {
+  if (e < NUMEVS && evdispatch[e]) {
+    evdispatch[e]();
+  }
 }

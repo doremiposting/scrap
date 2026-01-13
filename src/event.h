@@ -3,19 +3,29 @@
 
 #include "main.h"
 
+#define NUMEVS 2
+
 typedef enum {
   SOMEEV,
   NOTANEV
 } Event;
 
+#define BUFFERSZ 8
+
 typedef struct {
-  Event *q;
-  size_t length;
-  size_t capacity;
-} Evqueue;
+  Event q[BUFFERSZ];
+  int head;
+  int tail;
+  size_t count;
+} Evbuffer;
 
-#define addevent(xs, x) da_append(xs, x)
+void initbuffer(Evbuffer *b);
+int buffull(Evbuffer *b);
+int bufempty(Evbuffer *b);
+int bufqueue(Evbuffer *b, Event e);
+int bufdeq(Evbuffer *b, Event *e);
 
-int handlenext(Evqueue *q);
+typedef void (*evhandler)(void);
+void execev(Event e);
 
 #endif /* EVENT_H */
