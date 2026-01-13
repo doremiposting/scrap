@@ -7,6 +7,7 @@
 
 #include "gfx.h"
 #include "gfx11.h"
+#include "event.h"
 
 #define WWIDTH 800
 #define WHEIGHT 600
@@ -20,8 +21,15 @@ GC gc;
 Atom wmdelwin;
 Tri2d tri;
 float a;
-float cx, cy;
-float da, mag;
+float cx, cy, mag;
+double da;
+
+#define EVTICKNS 600000000LL
+#define GFXTICKNS 16666667LL
+#define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
+#define DIFFNS(start, end) \
+    ((int64_t)((end).tv_sec - (start).tv_sec) * 1000000000LL + \
+     ((end).tv_nsec - (start).tv_nsec))
 
 void
 ginit() {
@@ -65,48 +73,48 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit, dorender, xi, yj;
+  int quit, xi, yj;
   struct timespec thene, thenr, nowe, nowr;
-  double elapsede, elapsedr;
+  long long elapsede, elapsedr;
   quit = 0;
-  dorender = 10;
-  clock_gettime(CLOCK_MONOTONIC, &thene);
-  clock_gettime(CLOCK_MONOTONIC, &thenr);
+  GETNS(thene);
+  GETNS(thenr);
   while (!quit) {
-    clock_gettime(CLOCK_MONOTONIC, &nowe);
-    elapsede = (nowe.tv_sec - thene.tv_sec) +
-               (nowe.tv_nsec - thene.tv_nsec) / 1000000000.0;
-    if (elapsede > 0.6f) {
-      while (XPending(display) > 0) {
-        XNextEvent(display, &ev);
-        switch (ev.type) {
-          case KeyPress:
-          switch (XLookupKeysym(&ev.xkey, 0)) {
-            case 'q':
-              quit = 1;
-              break;
-            default:
-              break;
-          }
-          break;
-          case MotionNotify: { /* event.xmotion.x, event.xmotion.y */ }
-          break;
-          case ClientMessage: {
-            if ((Atom) ev.xclient.data.l[0] == wmdelwin) { quit = 1; }
-          }
-          break;
+    /* TODO: Pending events should be queued in realtime but executed in ticktime */
+    /* Next loop should addevent() a queue of events which then get popped off with */
+    /* handlenext() dispatching back to x11. EXCEPT FOR QUIT, WHICH SHOULD ALWAYS */
+    /* TAKE IMMEDIATE PRIORITY. */
+    while (XPending(display) > 0) {
+      XNextEvent(display, &ev);
+      switch (ev.type) {
+        case KeyPress:
+        switch (XLookupKeysym(&ev.xkey, 0)) {
+          case 'q':
+            quit = 1;
+            break;
           default:
-            /* if (ev.type == CompletionType) { } */
-          break;
-
+            break;
         }
+        break;
+        case MotionNotify: { /* event.xmotion.x, event.xmotion.y */ }
+        break;
+        case ClientMessage: {
+          if ((Atom) ev.xclient.data.l[0] == wmdelwin) { quit = 1; }
+        }
+        break;
+        default:
+          /* if (ev.type == CompletionType) { } */
+        break;
+
       }
-      clock_gettime(CLOCK_MONOTONIC, &thene);
     }
-    clock_gettime(CLOCK_MONOTONIC, &nowr);
-    elapsedr = (nowr.tv_sec - thenr.tv_sec) +
-               (nowr.tv_nsec - thenr.tv_nsec) / 1000000000.0;
-    if (elapsedr > (1/60.0f)) {
+    GETNS(nowe);
+    elapsede = DIFFNS(thene, nowe);
+    if (elapsede > EVTICKNS) { GETNS(thene); }
+
+    GETNS(nowr);
+    elapsedr = DIFFNS(thenr, nowr);
+    if (elapsedr > GFXTICKNS) {
       tri.x1 = cx + cosf(da*0 + a)*mag;  tri.y1 = cy + sinf(da*0 + a)*mag;
       tri.x2 = cx + cosf(da*1 + a)*mag;  tri.y2 = cy + sinf(da*1 + a)*mag;
       tri.x3 = cx + cosf(da*2 + a)*mag;  tri.y3 = cy + sinf(da*2 + a)*mag;
@@ -118,7 +126,7 @@ render() {
       /* printf("(%d, %d), (%d, %d), (%d, %d)\n", tri.x1, tri.y1, tri.x2, tri.y2, tri.x3, tri.y3); */
       XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
       a += 0.001f;
-      clock_gettime(CLOCK_MONOTONIC, &thene);
+      GETNS(thene);
     }
   }
 }

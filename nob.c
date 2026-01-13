@@ -62,8 +62,10 @@ main(int argc, char *argv[]) {
   compilefile("src/game.c", "build/game.o");
   boilerplate();
   compilefile("src/main.c", "build/main.o");
+  boilerplate();
+  compilefile("src/event.c", "build/event.o");
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm",
-    "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o");
+    "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o", "build/event.o");
 	if (!cmd_run(&cmd)) { return 1; }
 }
