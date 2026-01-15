@@ -21,7 +21,8 @@ GC gc;
 Atom wmdelwin;
 Tri2d tri;
 float a;
-float cx, cy, mag;
+float cx, cy, mag, dx, dy;
+int mmx, mmy;
 double da;
 
 #define EVTICKNS 600000000LL
@@ -37,6 +38,10 @@ ginit() {
   da = 2*M_PI/3;
   cx = WWIDTH/2;
   cy = WHEIGHT/2;
+  dx = 2.0;
+  dy = 2.0;
+  mmx = 1;
+  mmy = 1;
   mag = WWIDTH/4;
   tri.x1 = cx + cosf(da*0 + a)*mag;  tri.y1 = cy + sinf(da*0 + a)*mag;
   tri.x2 = cx + cosf(da*1 + a)*mag;  tri.y2 = cy + sinf(da*1 + a)*mag;
@@ -126,8 +131,10 @@ render() {
       }
       /* printf("(%d, %d), (%d, %d), (%d, %d)\n", tri.x1, tri.y1, tri.x2, tri.y2, tri.x3, tri.y3); */
       XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
-      a += 0.001f;
-      GETNS(thene);
+      a += 0.05f;
+      cx += dx*mmx; if (cx > WWIDTH || cx < 0) { mmx *= -1; }
+      cy += dy*mmy; if (cy > WHEIGHT || cy < 0) { mmy *= -1; }
+      GETNS(thenr);
     }
   }
 }
