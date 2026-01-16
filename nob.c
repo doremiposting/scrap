@@ -55,6 +55,7 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-I/opt/X11/include");
   #else
   cmd_append(&cmd, "-lX11");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
   #endif
   compilefile("src/gfx11.c", "build/gfx11.o");
 

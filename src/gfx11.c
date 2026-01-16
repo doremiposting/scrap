@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+#if defined(__APPLE__)
 #include <time.h>
+#elif defined(__GNUC__)
+#include <time.h>
+#include <bits/time.h>
+#endif
 
 #include <X11/Xlib.h>
 
