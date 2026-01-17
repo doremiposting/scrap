@@ -2,12 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#if defined(__APPLE__)
 #include <time.h>
-#elif defined(__GNUC__)
-#include <time.h>
-#include <bits/time.h>
-#endif
 
 #include <X11/Xlib.h>
 
@@ -49,9 +44,9 @@ ginit() {
   mmx = 1;
   mmy = 1;
   mag = WWIDTH/4;
-  tri.x1 = cx + cosf(da*0 + a)*mag;  tri.y1 = cy + sinf(da*0 + a)*mag;
-  tri.x2 = cx + cosf(da*1 + a)*mag;  tri.y2 = cy + sinf(da*1 + a)*mag;
-  tri.x3 = cx + cosf(da*2 + a)*mag;  tri.y3 = cy + sinf(da*2 + a)*mag;
+  tri.x1 = (int)(cx + cosf((float)da*0 + a)*mag);  tri.y1 = (int)(cy + sinf((float)da*0 + a)*mag);
+  tri.x2 = (int)(cx + cosf((float)da*1 + a)*mag);  tri.y2 = (int)(cy + sinf((float)da*1 + a)*mag);
+  tri.x3 = (int)(cx + cosf((float)da*2 + a)*mag);  tri.y3 = (int)(cy + sinf((float)da*2 + a)*mag);
   pixels = calloc(WWIDTH*WHEIGHT, sizeof(int));
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
@@ -127,9 +122,9 @@ render() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
-      tri.x1 = cx + cosf(da*0 + a)*mag;  tri.y1 = cy + sinf(da*0 + a)*mag;
-      tri.x2 = cx + cosf(da*1 + a)*mag;  tri.y2 = cy + sinf(da*1 + a)*mag;
-      tri.x3 = cx + cosf(da*2 + a)*mag;  tri.y3 = cy + sinf(da*2 + a)*mag;
+      tri.x1 = (int)(cx + cosf((float)da*0 + a)*mag);  tri.y1 = (int)(cy + sinf((float)da*0 + a)*mag);
+      tri.x2 = (int)(cx + cosf((float)da*1 + a)*mag);  tri.y2 = (int)(cy + sinf((float)da*1 + a)*mag);
+      tri.x3 = (int)(cx + cosf((float)da*2 + a)*mag);  tri.y3 = (int)(cy + sinf((float)da*2 + a)*mag);
       for (xi = 0; xi < WWIDTH; xi++) {
         for (yj = 0; yj < WHEIGHT; yj++) {
           pixels[yj*WWIDTH+xi] = intri2d(tri, xi, yj) ? tri2drbary(tri, xi, yj) : yj*WWIDTH+xi;
@@ -138,8 +133,8 @@ render() {
       /* printf("(%d, %d), (%d, %d), (%d, %d)\n", tri.x1, tri.y1, tri.x2, tri.y2, tri.x3, tri.y3); */
       XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
       a += 0.05f;
-      cx += dx*mmx; if (cx > WWIDTH || cx < 0) { mmx *= -1; }
-      cy += dy*mmy; if (cy > WHEIGHT || cy < 0) { mmy *= -1; }
+      cx += (dx*(float)mmx); if (cx > WWIDTH || cx < 0) { mmx *= -1; }
+      cy += (dy*(float)mmy); if (cy > WHEIGHT || cy < 0) { mmy *= -1; }
       GETNS(thenr);
     }
   }
