@@ -129,4 +129,9 @@ tri2dc(Tri2d t, int x, int y, int r, int g, int b) {
 
   return ((a << 24) | (r << 16) | (g << 8) | (b));
 }
-*/ return 0; }
+*/
+  /* XXX: Nonsense to make the compiler warnings disappear.
+   * Remove when above TODO is removed. */
+  r = g = b = x = y = 0;
+  if (r == g ) { t.x1 = t.y1 = 0; }
+  return 0; }

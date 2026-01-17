@@ -79,7 +79,7 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit, xi, yj, evrate;
+  int quit, xi, yj;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
   quit = 0;
@@ -116,7 +116,6 @@ render() {
     }
     GETNS(nowe);
     elapsede = DIFFNS(thene, nowe);
-    evrate = 5; /* TODO: Use as rate of draining event buffer. */
     if (elapsede > EVTICKNS) { GETNS(thene); }
 
     GETNS(nowr);
