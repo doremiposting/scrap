@@ -3,7 +3,7 @@
 #include "main.h"
 
 typedef struct {
-    int x1, y1, x2, y2, x3, y3;
+  int x1, y1, x2, y2, x3, y3;
 } Tri2d;
 
 int intri2d(Tri2d t, int x, int y);

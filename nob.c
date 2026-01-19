@@ -58,6 +58,17 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-D_GNU_SOURCE");
   #endif
   compilefile("src/gfx11.c", "build/gfx11.o");
+  
+  boilerplate();
+  #ifdef __APPLE__
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
+  #else
+  cmd_append(&cmd, "-lX11");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  #endif
+  cmd_append(&cmd, "-lGL");
+  compilefile("src/gfxgl.c", "build/gfxgl.o");
 
   boilerplate();
   compilefile("src/game.c", "build/game.o");
@@ -68,5 +79,10 @@ main(int argc, char *argv[]) {
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm",
     "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o", "build/event.o");
+	if (!cmd_run(&cmd)) { return 1; }
+
+	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap.gl",
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o");
 	if (!cmd_run(&cmd)) { return 1; }
 }
