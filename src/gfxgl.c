@@ -41,6 +41,7 @@ Colormap cmap;
 
 void
 ginit() {
+  XEvent z;
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = WWIDTH/2;
@@ -57,9 +58,11 @@ ginit() {
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
   GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
   vi = glXChooseVisual(display, 0, att);
+  if (!vi) { printf("No valid visual found\n"); return; }
+  else { printf("visual: %p\n", vi->visualid); }
   cmap = XCreateColormap(display, XRootWindow(display, vi->screen), vi->visual, AllocNone);
   wmdelwin = XInternAtom(display, "WM_DELETE_WINDOW", False);
-  swa.colormap = cmap; swa.event_mask = ExposureMask | KeyPressMask;
+  swa.colormap = cmap; swa.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
   window = XCreateWindow(
     display,
     XRootWindow(display, vi->screen),
@@ -69,8 +72,14 @@ ginit() {
     );
   XGetWindowAttributes(display, window, &wa);
   XSetWMProtocols(display, window, &wmdelwin, 1);
-  XSelectInput(display, window, KeyPressMask|PointerMotionMask);
+  XSelectInput(display, window, StructureNotifyMask|KeyPressMask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
+  XMapWindow(display, window);
+  for (;;) {
+    XNextEvent(display, &z);
+    if (z.type == MapNotify) { break; }
+    else { printf("event type %d\n", z.type); }
+  }
   glc = glXCreateContext(display, vi, NULL, 1);
   glXMakeCurrent(display, window, glc);
   glViewport(0, 0, WWIDTH, WHEIGHT);
@@ -78,7 +87,6 @@ ginit() {
   glLoadIdentity();
   glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
   glMatrixMode(GL_MODELVIEW);
-  XMapWindow(display, window);
 }
 
 void
