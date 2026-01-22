@@ -1,5 +1,5 @@
 nob
 nob.old
-scrap
+scrap*
 build/*.o
 .DS_Store

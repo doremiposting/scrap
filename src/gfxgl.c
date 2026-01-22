@@ -41,7 +41,6 @@ Colormap cmap;
 
 void
 ginit() {
-  XEvent z;
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = WWIDTH/2;
@@ -57,7 +56,7 @@ ginit() {
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
   GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
-  vi = glXChooseVisual(display, 0, att);
+  vi = glXChooseVisual(display, DefaultScreen(display), att);
   if (!vi) { printf("No valid visual found\n"); return; }
   else { printf("visual: %p\n", vi->visualid); }
   cmap = XCreateColormap(display, XRootWindow(display, vi->screen), vi->visual, AllocNone);
@@ -74,25 +73,25 @@ ginit() {
   XSetWMProtocols(display, window, &wmdelwin, 1);
   XSelectInput(display, window, StructureNotifyMask|KeyPressMask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
-  XMapWindow(display, window);
-  for (;;) {
-    XNextEvent(display, &z);
-    if (z.type == MapNotify) { break; }
-    else { printf("event type %d\n", z.type); }
-  }
-  glc = glXCreateContext(display, vi, NULL, 1);
-  glXMakeCurrent(display, window, glc);
+  glc = glXCreateContext(display, vi, NULL, 0);
+  if (!glc) { printf("Could not create opengl context!\n"); return; }
+  printf("Context created: %p  Is direct? %s\n",
+       glc, glXIsDirect(display, glc) ? "yes" : "no (indirect)");
+  //glXWaitX();
+  //XSync(display, 0);
+  glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
   glViewport(0, 0, WWIDTH, WHEIGHT);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
   glMatrixMode(GL_MODELVIEW);
+  XMapWindow(display, window);
 }
 
 void
 render() {
   XEvent ev;
-  int quit, xi, yj;
+  int quit;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
   quit = 0;
@@ -136,21 +135,6 @@ render() {
     if (elapsedr > GFXTICKNS) {
 			glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
-		#if 0
-      tri.x1 = (int)(cx + cosf((float)da*0 + a)*mag);  tri.y1 = (int)(cy + sinf((float)da*0 + a)*mag);
-      tri.x2 = (int)(cx + cosf((float)da*1 + a)*mag);  tri.y2 = (int)(cy + sinf((float)da*1 + a)*mag);
-      tri.x3 = (int)(cx + cosf((float)da*2 + a)*mag);  tri.y3 = (int)(cy + sinf((float)da*2 + a)*mag);
-      for (xi = 0; xi < WWIDTH; xi++) {
-        for (yj = 0; yj < WHEIGHT; yj++) {
-          pixels[yj*WWIDTH+xi] = intri2d(tri, xi, yj) ? tri2drbary(tri, xi, yj) : yj*WWIDTH+xi;
-        }
-      }
-      /* printf("(%d, %d), (%d, %d), (%d, %d)\n", tri.x1, tri.y1, tri.x2, tri.y2, tri.x3, tri.y3); */
-      XPutImage(display, window, gc, i, 0, 0, 0, 0, WWIDTH, WHEIGHT);
-      a += 0.05f;
-      cx += (dx*(float)mmx); if (cx > WWIDTH || cx < 0) { mmx *= -1; }
-      cy += (dy*(float)mmy); if (cy > WHEIGHT || cy < 0) { mmy *= -1; }
-		#endif
       glLoadIdentity();
       glTranslatef(cx, cy, 0.0f);
       glRotatef(a, 0.0f, 0.0f, 1.0f);
@@ -166,9 +150,9 @@ render() {
       XSync(display, 0);
       glFlush();
       a += 3.0f;
-      cx += (dx*mmx);
+      cx += (dx*(float)mmx);
       if (cx - rad < 0) { cx = rad; mmx *= -1; } if (cx + rad > WWIDTH) { cx = WWIDTH - rad; mmx *= -1; }
-      cy += (dx*mmy);
+      cy += (dx*(float)mmy);
       if (cy - rad < 0) { cy = rad; mmy *= -1; } if (cy + rad > WHEIGHT) { cy = WHEIGHT - rad; mmy *= -1; }
       GETNS(thenr);
     }
