@@ -2,4 +2,5 @@ nob
 nob.old
 scrap*
 build/*.o
+*.swp
 .DS_Store

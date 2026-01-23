@@ -12,6 +12,8 @@
 #include "gfxgl.h"
 #include "event.h"
 
+#include "teapot.c"
+
 #define WWIDTH 800
 #define WHEIGHT 600
 
@@ -41,6 +43,7 @@ Colormap cmap;
 
 void
 ginit() {
+  float fovyrad, top, bottom, right, left;
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = WWIDTH/2;
@@ -73,7 +76,7 @@ ginit() {
   XSetWMProtocols(display, window, &wmdelwin, 1);
   XSelectInput(display, window, StructureNotifyMask|KeyPressMask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
-  glc = glXCreateContext(display, vi, NULL, 0);
+  glc = glXCreateContext(display, vi, NULL, 1);
   if (!glc) { printf("Could not create opengl context!\n"); return; }
   printf("Context created: %p  Is direct? %s\n",
        glc, glXIsDirect(display, glc) ? "yes" : "no (indirect)");
@@ -81,8 +84,14 @@ ginit() {
   //XSync(display, 0);
   glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
   glViewport(0, 0, WWIDTH, WHEIGHT);
+  fovyrad = 60.0f * (M_PI / 180.0f);
+  top = tanf(fovyrad * 0.5f) * 0.1f;
+  bottom = -top;
+  right = top * (float)(WWIDTH / WHEIGHT);
+  left = -right;
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
+  glFrustum(left, right, bottom, top, 0.1f, 1000.0f);
   glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
   glMatrixMode(GL_MODELVIEW);
   XMapWindow(display, window);
@@ -94,7 +103,10 @@ render() {
   int quit;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
+  float camyaw;
+  int vi;
   quit = 0;
+  camyaw = 0.0f;
   GETNS(thene);
   GETNS(thenr);
   while (!quit) {
@@ -133,27 +145,34 @@ render() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
+      camyaw += 0.5f;
+      glMatrixMode(GL_MODELVIEW);
+      glLoadIdentity();
+      glRotatef(-camyaw, 0, 1, 0);
+      glTranslatef(0.0f, 0.0f, -5.0f); 
+
 			glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
-      glLoadIdentity();
-      glTranslatef(cx, cy, 0.0f);
+      //glLoadIdentity();
+      //glTranslatef(cx, cy, 0.0f);
       glRotatef(a, 0.0f, 0.0f, 1.0f);
+      glScalef(0.1f, 0.1f, 0.1f);
       glBegin(GL_TRIANGLES);
-        glColor3f(1, 0, 0);
-        glVertex2f(tri.x1, tri.y1);
-        glColor3f(0, 1, 0);
-        glVertex2f(tri.x2, tri.y2);
-        glColor3f(0, 0, 1);
-        glVertex2f(tri.x3, tri.y3);
+      for ((vi = 0); vi < vertices_count; vi++) {
+          glColor3f(0, 1, 0);
+          glVertex3fv(vertices[vi]);
+      }
       glEnd();
 			glXSwapBuffers(display, window);
       XSync(display, 0);
       glFlush();
       a += 3.0f;
+#if 0
       cx += (dx*(float)mmx);
       if (cx - rad < 0) { cx = rad; mmx *= -1; } if (cx + rad > WWIDTH) { cx = WWIDTH - rad; mmx *= -1; }
       cy += (dx*(float)mmy);
       if (cy - rad < 0) { cy = rad; mmy *= -1; } if (cy + rad > WHEIGHT) { cy = WHEIGHT - rad; mmy *= -1; }
+#endif
       GETNS(thenr);
     }
   }
