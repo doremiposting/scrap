@@ -76,6 +76,9 @@ main(int argc, char *argv[]) {
   compilefile("src/main.c", "build/main.o");
   boilerplate();
   compilefile("src/event.c", "build/event.o");
+  boilerplate();
+  cmd_append(&cmd, "--no-warnings");
+  compilefile("src/teapot.c", "build/teapot.o");
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm",
     "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o", "build/event.o");
@@ -83,6 +86,6 @@ main(int argc, char *argv[]) {
 
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap.gl",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL",
-    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o");
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o");
 	if (!cmd_run(&cmd)) { return 1; }
 }

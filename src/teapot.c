@@ -1,7 +1,7 @@
 #ifndef OBJ_H_
 #define OBJ_H_
-#define vertices_count 3644
-static const float vertices[][3] = {
+//#define vertices_count 3644
+const float vertices[][3] = {
     {-1.286800, 0.090000, 0.000000},
     {-1.283440, 0.090000, -0.032400},
     {-1.283440, 0.090000, 0.032400},
