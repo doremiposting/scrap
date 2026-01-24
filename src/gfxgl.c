@@ -78,12 +78,13 @@ ginit() {
   float fovyrad, top, bottom, right, left;
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
-  cx = WWIDTH/2;
-  cy = WHEIGHT/2;
-  dx = 2.0;
-  dy = 2.0;
+  cx = 0.0f;
+  cy = 0.0f;
+  dx = 0.05f;
+  dy = 0.05f;
   mmx = 1;
   mmy = 1;
+  rad = 0.75;
   tri.x1 = 0.0f; tri.y1 = 100.0f;
   tri.x2 = -75.0f; tri.y2 = -50.0f;
   tri.x3 = 75.0f; tri.y3 = -50.0f;
@@ -123,7 +124,7 @@ ginit() {
   left = -right;
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glFrustum(left, right, bottom, top, 0.1f, 1000.0f);
+  glFrustum(left, right, bottom, top, 0.1f, 1000.0f); // TODO: Update frustum on window resize
   //glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
   glMatrixMode(GL_MODELVIEW);
   XMapWindow(display, window);
@@ -177,13 +178,12 @@ render() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
-
 			//glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
-			lookat(3.0, 3.0, 3.0-4.5, 0.0, 0.0,-4.5,0,1,0);
+			lookat(3.0, 3.0, 3.0, 0.0, 0.0, -4.5, 0, 1, 0);
 			glPushMatrix();
       glTranslatef(0.0f, 0.0f, -4.5f); 
       glBegin(GL_LINES);
@@ -198,25 +198,24 @@ render() {
 				glVertex3f(0,0,10);
       glEnd();
 			glPopMatrix();
-      glLoadIdentity();
-      glTranslatef(0.0f, 0.0f, -5.0f); 
-      glTranslatef(cx, cy, 0.0f);
-      glRotatef(a, 0.0f, 0.0f, 1.0f);
+      glPushMatrix();
+      glTranslatef(cx, cy, -5.0f); 
+      glRotatef(a, 0.0f, 1.0f, 0.0f);
       glBegin(GL_TRIANGLES);
       for ((vi = 0); vi < vertices_count; vi++) {
           glColor3f(0, 1, 0);
           glVertex3f(vertices[vi][0], vertices[vi][1], vertices[vi][2]);
       }
       glEnd();
+      glPopMatrix();
 			glXSwapBuffers(display, window);
       XSync(display, 0);
       glFlush();
       a += 3.0f;
-      camyaw += 5.0f;
       cx += (dx*(float)mmx);
-      if (cx - rad < 0) { cx = rad; mmx *= -1; } if (cx + rad > WWIDTH) { cx = WWIDTH - rad; mmx *= -1; }
+      if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; }
       cy += (dx*(float)mmy);
-      if (cy - rad < 0) { cy = rad; mmy *= -1; } if (cy + rad > WHEIGHT) { cy = WHEIGHT - rad; mmy *= -1; }
+      if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; }
       GETNS(thenr);
     }
   }
