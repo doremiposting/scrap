@@ -76,6 +76,10 @@ main(int argc, char *argv[]) {
   compilefile("src/main.c", "build/main.o");
   boilerplate();
   compilefile("src/event.c", "build/event.o");
+#if defined(__GNUC__) 
+  boilerplate();
+  compilefile("src/sfxpa.c", "build/sfxpa.o");
+#endif
   boilerplate();
   cmd_append(&cmd, "--no-warnings");
   compilefile("src/teapot.c", "build/teapot.o");
@@ -84,8 +88,10 @@ main(int argc, char *argv[]) {
     "build/main.o", "build/gfx11.o", "build/game.o", "build/gfx.o", "build/event.o");
 	if (!cmd_run(&cmd)) { return 1; }
 
+#if defined(__GNUC__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap.gl",
-    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL",
-    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o");
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lpulse", "-lpulse-simple",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o", "build/sfxpa.o");
 	if (!cmd_run(&cmd)) { return 1; }
+#endif
 }
