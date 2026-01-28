@@ -20,7 +20,7 @@ int error;
 void
 initsfx() {
   mpg123_init();
-  mh = mpg123_new(NULL, &err);
+  mh = mpg123_new(NULL, &error);
   mpg123_open(mh, "assets/vine boom.mp3");
   mpg123_getformat(mh, &rate, &chnls, &enc);
   mpg123_format_none(mh);
