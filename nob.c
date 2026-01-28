@@ -91,6 +91,7 @@ main(int argc, char *argv[]) {
 #if defined(__GNUC__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap.gl",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lpulse", "-lpulse-simple",
+    "-lmpg123",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o", "build/sfxpa.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
