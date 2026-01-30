@@ -47,6 +47,7 @@ initsfx() {
 
 int
 playsfx(const char *fn) {
+  /* XXX: There's a huge stall right here and you can't play the same sound twice... */
   while ((error = mpg123_read(mh, buffer, buffersz, &done)) == MPG123_OK) {
     if (pa_simple_write(ps, buffer, done, &error) < 0) {
       fprintf(stderr, "pa_simple_write failure!  %s\n", pa_strerror(error));

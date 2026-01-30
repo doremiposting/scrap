@@ -10,7 +10,7 @@
 
 #include "gfx.h"
 #include "gfxgl.h"
-#include "sfxpa.h"
+#include "sfxalsa.h"
 #include "event.h"
 #include "teapot.h"
 
