@@ -10,6 +10,13 @@ typedef struct {
   int chnls;
 } Aout;
 
+typedef struct {
+  short *pcm;
+  size_t frames;
+  int rate;
+  int chnls;
+} Soundfx;
+
 int initsfx();
 int playsfx(const char *fn);
 void killsfx();

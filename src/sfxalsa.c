@@ -13,9 +13,22 @@ size_t buffersz, done;
 snd_pcm_hw_params_t *hw;
 int rc, chnls, enc, error;
 long rate;
+Soundfx *s;
+
+#if 0
+Soundfx
+newsnd() {
+  /* TODO: expand to initialize anything as pcm, require reuse of mh et. al. */
+  return NULL;
+}
+#endif
 
 int
 initsfx() {
+  unsigned char b[8196];
+  unsigned char *a;
+  int r;
+  size_t cap;
   mpg123_init();
   mh = mpg123_new(NULL, &error);
   mpg123_open(mh, "assets/vine boom.mp3");
@@ -24,6 +37,22 @@ initsfx() {
   mpg123_format(mh, rate, chnls, MPG123_ENC_SIGNED_16);
   buffersz = mpg123_outblock(mh);
   buffer = malloc(buffersz);
+  
+  s = calloc(1, sizeof(Soundfx));
+  a = NULL; cap = 0;
+  s->rate = rate;
+  s->chnls = chnls;
+  while(mpg123_read(mh, (unsigned char *)&a, 0, &done) != MPG123_DONE) {
+    r = mpg123_read(mh, b, sizeof(b), &done);
+    if (r == MPG123_OK && done > 0) {
+      a = realloc(a, cap+done);
+      memcpy(a + cap, b, done);
+      cap += done;
+    }
+  }
+  s->pcm = (short*)a;
+  s->frames = cap / (chnls * sizeof(short));
+
 
   ao = calloc(1, sizeof(Aout));
   if (!ao) { return -1; }
@@ -50,12 +79,10 @@ initsfx() {
 
 int
 playsfx(const char *fn) {
-  snd_pcm_sframes_t frames, rc;
-  while (mpg123_read(mh, buffer, buffersz, &done) == MPG123_OK) {
-    frames = done / (ao->chnls * 2);
-    rc = snd_pcm_writei(ao->pcm, buffer, frames);
-    if (rc == -EPIPE) { snd_pcm_prepare(ao->pcm); }
-  }
+  snd_pcm_sframes_t frames, rc, error;
+  snd_pcm_prepare(ao->pcm);
+  frames = snd_pcm_writei(ao->pcm, s->pcm, s->frames);
+  if (frames < 0) { snd_pcm_recover(ao->pcm, frames, 0); }
 }
 
 void
@@ -67,6 +94,7 @@ killsfx() {
   mpg123_delete(mh);
   mpg123_exit();
 
+  free(s->pcm); free(s);
   free(buffer);
   free(ao);
 }
