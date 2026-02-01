@@ -38,9 +38,10 @@ initsfx() {
   buffersz = mpg123_outblock(mh);
   buffer = malloc(buffersz);
   
+  /* TODO: Extract this out to newsnd(), reuse mh as set up above. */
   s = calloc(1, sizeof(Soundfx));
   a = NULL; cap = 0;
-  s->rate = rate;
+  s->rate = (int)rate; /* TODO: Should the struct member be changed to long? */
   s->chnls = chnls;
   while(mpg123_read(mh, (unsigned char *)&a, 0, &done) != MPG123_DONE) {
     r = mpg123_read(mh, b, sizeof(b), &done);
@@ -51,7 +52,7 @@ initsfx() {
     }
   }
   s->pcm = (short*)a;
-  s->frames = cap / (chnls * sizeof(short));
+  s->frames = (size_t)(cap / ((size_t)chnls * sizeof(short)));
 
 
   ao = calloc(1, sizeof(Aout));
@@ -64,14 +65,14 @@ initsfx() {
   snd_pcm_hw_params_any(ao->pcm, hw);
   snd_pcm_hw_params_set_access(ao->pcm, hw, SND_PCM_ACCESS_RW_INTERLEAVED);
   snd_pcm_hw_params_set_format(ao->pcm, hw, SND_PCM_FORMAT_S16_LE);
-  snd_pcm_hw_params_set_channels(ao->pcm, hw, chnls);
-  snd_pcm_hw_params_set_rate(ao->pcm, hw, rate, 0);
+  snd_pcm_hw_params_set_channels(ao->pcm, hw, (unsigned int)chnls);
+  snd_pcm_hw_params_set_rate(ao->pcm, hw, (unsigned int)rate, 0);
   ao->frames = 1024;
   snd_pcm_hw_params_set_period_size(ao->pcm, hw, ao->frames, 0);
   rc = snd_pcm_hw_params(ao->pcm, hw);
   snd_pcm_hw_params_free(hw);
   snd_pcm_prepare(ao->pcm);
-  ao->rate = rate;
+  ao->rate = (int)rate;
   ao->chnls = chnls;
 
   return rc;
@@ -79,10 +80,10 @@ initsfx() {
 
 int
 playsfx(const char *fn) {
-  snd_pcm_sframes_t frames, rc, error;
+  snd_pcm_sframes_t frames;
   snd_pcm_prepare(ao->pcm);
   frames = snd_pcm_writei(ao->pcm, s->pcm, s->frames);
-  if (frames < 0) { snd_pcm_recover(ao->pcm, frames, 0); }
+  if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }
 }
 
 void

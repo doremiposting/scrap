@@ -76,7 +76,8 @@ void lookat(float ex, float ey, float ez,
 
 void
 ginit() {
-  float fovyrad, top, bottom, right, left;
+  float top, bottom, right, left;
+  double fovyrad;
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = 0.0f;
@@ -119,7 +120,7 @@ ginit() {
   glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
   glViewport(0, 0, WWIDTH, WHEIGHT);
   fovyrad = 60.0f * (M_PI / 180.0f);
-  top = tanf(fovyrad * 0.5f) * 0.1f;
+  top = tanf((float)fovyrad * 0.5f) * 0.1f;
   bottom = -top;
   right = top * (float)(WWIDTH / WHEIGHT);
   left = -right;
@@ -190,13 +191,13 @@ render() {
       glTranslatef(0.0f, 0.0f, -4.5f); 
       glBegin(GL_LINES);
 				glColor3f(1,0,0);
-				glVertex3f(0,0,-0.001);
-				glVertex3f(10,0,-0.002);
+				glVertex3f(0,0,-0.001f);
+				glVertex3f(10,0,-0.002f);
 				glColor3f(0,1,0);
-				glVertex3f(0,0,-0.001);
-				glVertex3f(0,10,-0.002);
+				glVertex3f(0,0,-0.001f);
+				glVertex3f(0,10,-0.002f);
 				glColor3f(0,0,1);
-				glVertex3f(0,0,-0.001);
+				glVertex3f(0,0,-0.001f);
 				glVertex3f(0,0,10);
       glEnd();
 			glPopMatrix();
