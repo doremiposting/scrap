@@ -17,8 +17,21 @@ typedef struct {
   int chnls;
 } Soundfx;
 
+typedef enum {
+  SFX_BOOM,
+  SFX_COUNT
+} SfxID;
+
+typedef struct {
+  Soundfx *snd;
+  size_t framepos;
+  float volume;
+  int active;
+  int loop;
+} Voice;
+
 int initsfx();
-int playsfx(const char *fn);
+int playsfx();
 void killsfx();
 
 #endif /* SFXALSA_H */

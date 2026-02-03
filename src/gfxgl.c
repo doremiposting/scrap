@@ -216,9 +216,9 @@ render() {
       glFlush();
       a += 3.0f;
       cx += (dx*(float)mmx);
-      if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; playsfx(""); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; playsfx(""); }
+      if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; playsfx(); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; playsfx(); }
       cy += (dx*(float)mmy);
-      if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; playsfx(""); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; playsfx(""); }
+      if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; playsfx(); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; playsfx(); }
       GETNS(thenr);
     }
   }
