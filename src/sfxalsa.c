@@ -14,6 +14,10 @@ snd_pcm_hw_params_t *hw;
 int rc, chnls, enc, error;
 long rate;
 Soundfx *s[SFX_COUNT];
+Triggersfx triggers[SFX_COUNT];
+#define MAXVCS 32
+Voice *voices;
+static unsigned int voicecnt;
 
 Soundfx *
 newsnd() {
@@ -22,9 +26,12 @@ newsnd() {
   unsigned char *a;
   size_t cap;
   unsigned char b[8196];
-  int r;
+  int r, i;
   /* s = calloc(SFX_COUNT, sizeof(Soundfx)); */
   ss = calloc(1, sizeof(Soundfx));
+  voices = calloc(MAXVCS, sizeof(Voice));
+  voicecnt = 0;
+  for (i = 0 ; i < SFX_COUNT ; i++) { triggers[i].on = 0; triggers[i].cut = 0; }
   a = NULL; cap = 0;
   ss->rate = (int)rate; /* TODO: Should the struct member be changed to long? */
   ss->chnls = chnls;
@@ -78,12 +85,18 @@ initsfx() {
   return rc;
 }
 
+void
+triggersfx(SfxID id, int cut) {
+  if (!triggers[id].on) { triggers[id].on = 1; triggers[id].cut = cut; }
+}
+
 int
 playsfx() {
   snd_pcm_sframes_t frames;
   snd_pcm_prepare(ao->pcm);
   frames = snd_pcm_writei(ao->pcm, s[SFX_BOOM]->pcm, s[SFX_BOOM]->frames);
   if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }
+  return 1;
 }
 
 void
@@ -96,6 +109,7 @@ killsfx() {
   mpg123_exit();
 
   free(s[SFX_BOOM]->pcm);
+  free (voices);
   free(buffer);
   free(ao);
 }

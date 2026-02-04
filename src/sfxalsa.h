@@ -23,6 +23,11 @@ typedef enum {
 } SfxID;
 
 typedef struct {
+  int on;
+  int cut;
+} Triggersfx;
+
+typedef struct {
   Soundfx *snd;
   size_t framepos;
   float volume;
@@ -31,6 +36,7 @@ typedef struct {
 } Voice;
 
 int initsfx();
+void triggersfx(SfxID id, int cut);
 int playsfx();
 void killsfx();
 
