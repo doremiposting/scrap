@@ -18,6 +18,8 @@ Triggersfx triggers[SFX_COUNT];
 #define MAXVCS 32
 Voice *voices;
 static unsigned int voicecnt;
+#define MIXFRAMES 512
+static short *mixbuffer;
 
 Soundfx *
 newsnd() {
@@ -58,6 +60,7 @@ initsfx() {
   mpg123_format(mh, rate, chnls, MPG123_ENC_SIGNED_16);
   buffersz = mpg123_outblock(mh);
   buffer = malloc(buffersz);
+  mixbuffer = calloc(MIXFRAMES * chnls, sizeof(short));
   
   /* TODO: newsnd() exists, but it needs to take a const char* for passing file paths.. */
   s[SFX_BOOM] = newsnd();
@@ -93,6 +96,8 @@ triggersfx(SfxID id, int cut) {
 int
 playsfx() {
   snd_pcm_sframes_t frames;
+  memset(mixbuffer, 0, sizeof(mixbuffer));
+
   snd_pcm_prepare(ao->pcm);
   frames = snd_pcm_writei(ao->pcm, s[SFX_BOOM]->pcm, s[SFX_BOOM]->frames);
   if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }

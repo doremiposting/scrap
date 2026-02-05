@@ -18,6 +18,7 @@ typedef struct {
 } Soundfx;
 
 typedef enum {
+  SFX_BGM,
   SFX_BOOM,
   SFX_COUNT
 } SfxID;
