@@ -30,7 +30,8 @@ typedef struct {
 
 typedef struct {
   Soundfx *snd;
-  size_t framepos;
+  SfxID id;
+  size_t position;
   float volume;
   int active;
   int loop;

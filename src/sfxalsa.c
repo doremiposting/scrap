@@ -95,13 +95,83 @@ triggersfx(SfxID id, int cut) {
 
 int
 playsfx() {
-  snd_pcm_sframes_t frames;
-  memset(mixbuffer, 0, sizeof(mixbuffer));
+  snd_pcm_sframes_t frames, mixableframes, remainingframes;
+  size_t f, mixi, srci;
+  int i, v, ch, activevc, mixed;
+  Voice *voice;
+  Soundfx *sfx;
+  activevc = 0;
+  
+  for (i = 0; i < voicecnt; i++) {
+    if (!triggers[i].on) { continue; }
+    sfx = s[i];
+    if (!sfx) { continue; }
 
-  snd_pcm_prepare(ao->pcm);
-  frames = snd_pcm_writei(ao->pcm, s[SFX_BOOM]->pcm, s[SFX_BOOM]->frames);
-  if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }
-  return 1;
+    voice = NULL;
+    for (v = 0; v < voicecnt; v++) {
+      if (voices[v].id == i && voices[v].active) { voice = &voices[v]; break; }
+    }
+    if (voice && triggers[i].cut) { voice->position = 0; }
+    if (!voice) {
+      for (v = 0; v < voicecnt; v++) {
+        if (!voices[v].active) {
+          voice = &voices[i];
+          voice->id = i;
+          voice->active = 1;
+          voice->position = 0;
+          if (v >= voicecnt) { voicecnt = v+1; }
+          break;
+        }
+      }
+      if (!voice && MAXVCS > 0) { 
+        voice = &voices[0];
+        voice->id = i;
+        voice->active = 1;
+        voice->position = 0;
+      }
+    }
+
+    triggers[i].on = 0;
+  }
+
+  memset(mixbuffer, 0, MIXFRAMES * chnls * sizeof(mixbuffer));
+
+  for (v = 0; v < voicecnt; v++) {
+    voice = &voices[v];
+    if (!voice->active) { continue; }
+    
+    sfx = s[voice->id];
+    if (!sfx || !sfx->pcm) { voice->active = 0; continue; }
+
+    mixableframes = MIXFRAMES;
+    remainingframes = sfx->frames - voice->position;
+    if (mixableframes > remainingframes) { mixableframes = remainingframes; }
+
+    for (f = 0; f < mixableframes; f++) {
+      for (ch = 0; ch < chnls; ch++) {
+        mixi = f * chnls + ch;
+        srci = (voice->position + f) * chnls + ch;
+
+        mixed = mixbuffer[mixi] + sfx->pcm[srci];
+        /* TODO: Don't use magic numbers here. */
+        if (mixed > 32767) { mixed = 32767; }
+        if (mixed < -32768) { mixed = -32768; }
+        mixbuffer[mixi] = (short) mixed;
+      }
+    }
+
+    voice->position = mixableframes;
+    activevc++;
+
+    if (voice->position >= sfx->frames) { voice->active = 0; }
+  }
+
+  if (activevc > 0) {
+    snd_pcm_prepare(ao->pcm);
+    frames = snd_pcm_writei(ao->pcm, mixbuffer, MIXFRAMES);
+    if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }
+  }
+  return activevc;
 }
 
 void
