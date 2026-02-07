@@ -214,6 +214,7 @@ render() {
 			glXSwapBuffers(display, window);
       XSync(display, 0);
       glFlush();
+      playsfx(nowr);
       a += 3.0f;
       cx += (dx*(float)mmx);
       if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); }
