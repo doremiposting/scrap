@@ -19,7 +19,7 @@ Triggersfx triggers[SFX_COUNT];
 #define MAXVCS 32
 Voice *voices;
 static unsigned int voicecnt;
-#define MIXFRAMES 735
+#define MIXFRAMES 736
 static short *mixbuffer;
 
 Soundfx *
@@ -69,7 +69,8 @@ initsfx() {
   ao = calloc(1, sizeof(Aout));
   if (!ao) { return -1; }
   //rc = snd_pcm_open(&ao->pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
-  rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, 0);
+  //rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, 0);
+  rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
   //rc = snd_pcm_open(&ao->pcm, "dmix", SND_PCM_STREAM_PLAYBACK, 0);
   if (rc < 0) { return rc; }
   snd_pcm_hw_params_malloc(&hw);
@@ -78,9 +79,9 @@ initsfx() {
   snd_pcm_hw_params_set_format(ao->pcm, hw, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_channels(ao->pcm, hw, (unsigned int)chnls);
   snd_pcm_hw_params_set_rate(ao->pcm, hw, (unsigned int)rate, 0);
-  ao->frames = 1024;
+  ao->frames = 2048;
   snd_pcm_hw_params_set_period_size(ao->pcm, hw, ao->frames, 0);
-  framebuffer = ao->frames * 3;
+  framebuffer = ao->frames * 4;
   snd_pcm_hw_params_set_buffer_size_near(ao->pcm, hw, &framebuffer);
   rc = snd_pcm_hw_params(ao->pcm, hw);
   snd_pcm_hw_params_free(hw);
@@ -98,16 +99,33 @@ triggersfx(SfxID id, int cut) {
 
 int
 playsfx(long long elapsed) {
-  snd_pcm_sframes_t frames, mixableframes, remainingframes;
+  snd_pcm_sframes_t frames, mixableframes, remainingframes, avail;
+  snd_pcm_state_t state;
   size_t f, mixi, srci;
   int i, v, ch, activevc, mixed;
   long mixtime;
   Voice *voice;
   Soundfx *sfx;
   activevc = 0;
+
+  state = snd_pcm_state(ao->pcm);
+  if (state == SND_PCM_STATE_XRUN) {
+    snd_pcm_prepare(ao->pcm);
+  } else if (state == SND_PCM_STATE_SUSPENDED) {
+    snd_pcm_resume(ao->pcm);
+  } else if (state != SND_PCM_STATE_RUNNING && state != SND_PCM_STATE_PREPARED) {
+    snd_pcm_prepare(ao->pcm);
+  }
+
   mixtime = ((rate * elapsed)/1000000000LL);
   if (mixtime > MIXFRAMES) { mixtime = MIXFRAMES; }
   if (mixtime == 0) { return 0; }
+
+  avail = snd_pcm_avail_update(ao->pcm);
+  if (avail < 0) {
+    snd_pcm_recover(ao->pcm, (int)avail, 0);
+    avail = snd_pcm_avail_update(ao->pcm);
+  }
   
   for (i = 0; i < SFX_COUNT; i++) {
     if (!triggers[i].on) { continue; }
@@ -173,9 +191,13 @@ playsfx(long long elapsed) {
     if (voice->position >= sfx->frames) { voice->active = 0; }
   }
 
-  if (activevc > 0) {
-    /* snd_pcm_prepare(ao->pcm); */
+  frames = snd_pcm_writei(ao->pcm, mixbuffer, mixtime);
+  if (frames == -EPIPE) { /* Buffer underrun state */
+    snd_pcm_prepare(ao->pcm);
     frames = snd_pcm_writei(ao->pcm, mixbuffer, mixtime);
+  }
+  else {
+  /* if (activevc > 0) { */
     if (frames < 0) { snd_pcm_recover(ao->pcm, (int)frames, 0); }
   }
   return activevc;
