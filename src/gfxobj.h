@@ -16,5 +16,6 @@ typedef struct { float x, y, z; } Vec3f;
 typedef struct { float u, v; } Vec2f;
 
 Mesh *loadobj(const char *fn);
+void killmesh(Mesh *m);
 
 #endif /* GFXOBJ_H */

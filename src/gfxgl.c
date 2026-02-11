@@ -10,6 +10,7 @@
 
 #include "gfx.h"
 #include "gfxgl.h"
+#include "gfxobj.h"
 #include "sfxalsa.h"
 #include "event.h"
 #include "teapot.h"
@@ -73,6 +74,17 @@ void lookat(float ex, float ey, float ez,
   glTranslatef(-ex, -ey, -ez);
 }
 
+void
+drawm(const Mesh *m) {
+  int i;
+  glBegin(GL_TRIANGLES);
+  for (i = 0; i < m->cnt; i++) {
+    glNormal3f(m->v[i].nx, m->v[i].ny, m->v[i].nz);
+    glTexCoord2f(m->v[i].u, m->v[i].v);
+    glVertex3f(m->v[i].x, m->v[i].y, m->v[i].z);
+  }
+  glEnd();
+}
 
 void
 ginit() {

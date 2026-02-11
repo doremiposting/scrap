@@ -1,9 +1,13 @@
 #ifndef GFXGL_H
 #define GFXGL_H
 
+#include "gfxobj.h"
+
 typedef struct {
   float x1, y1, x2, y2, x3, y3;
 } Tri2df;
+
+void drawm(const Mesh *m);
 
 void ginit();
 void render();
