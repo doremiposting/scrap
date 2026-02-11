@@ -61,7 +61,7 @@ initsfx() {
   mpg123_format(mh, rate, chnls, MPG123_ENC_SIGNED_16);
   buffersz = mpg123_outblock(mh);
   buffer = malloc(buffersz);
-  mixbuffer = calloc(MIXFRAMES * chnls, sizeof(short));
+  mixbuffer = calloc((size_t)(MIXFRAMES * chnls), sizeof(short));
   
   /* TODO: newsnd() exists, but it needs to take a const char* for passing file paths.. */
   s[SFX_BOOM] = newsnd();
@@ -102,7 +102,8 @@ playsfx(long long elapsed) {
   snd_pcm_sframes_t frames, mixableframes, remainingframes, avail;
   snd_pcm_state_t state;
   size_t f, mixi, srci;
-  int i, v, ch, activevc, mixed;
+  unsigned int i, v;
+  int ch, activevc, mixed;
   long mixtime;
   Voice *voice;
   Soundfx *sfx;
@@ -172,9 +173,9 @@ playsfx(long long elapsed) {
     remainingframes = sfx->frames - voice->position;
     if (mixableframes > remainingframes) { mixableframes = remainingframes; }
 
-    for (f = 0; f < mixableframes; f++) {
+    for (f = 0; (long)(f) < mixableframes; f++) {
       for (ch = 0; ch < chnls; ch++) {
-        mixi = f * chnls + ch;
+        mixi = (size_t)(f * chnls + ch);
         srci = (voice->position + f) * chnls + ch;
 
         mixed = mixbuffer[mixi] + sfx->pcm[srci];
@@ -185,16 +186,16 @@ playsfx(long long elapsed) {
       }
     }
 
-    voice->position += mixableframes;
+    voice->position += (unsigned long)mixableframes;
     activevc++;
 
     if (voice->position >= sfx->frames) { voice->active = 0; }
   }
 
-  frames = snd_pcm_writei(ao->pcm, mixbuffer, mixtime);
+  frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
   if (frames == -EPIPE) { /* Buffer underrun state */
     snd_pcm_prepare(ao->pcm);
-    frames = snd_pcm_writei(ao->pcm, mixbuffer, mixtime);
+    frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
   }
   else {
   /* if (activevc > 0) { */
