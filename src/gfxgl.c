@@ -13,7 +13,6 @@
 #include "gfxobj.h"
 #include "sfxalsa.h"
 #include "event.h"
-#include "teapot.h"
 
 #define WWIDTH 800
 #define WHEIGHT 600
@@ -33,6 +32,7 @@ int mmx, mmy;
 double da;
 GLXContext glc;
 Colormap cmap;
+Mesh *tp;
 
 #define EVTICKNS 600000000LL
 #define GFXTICKNS 16666667LL
@@ -102,6 +102,8 @@ ginit() {
   tri.x1 = 0.0f; tri.y1 = 100.0f;
   tri.x2 = -75.0f; tri.y2 = -50.0f;
   tri.x3 = 75.0f; tri.y3 = -50.0f;
+
+  tp = loadobj("assets/teapot.obj");
 
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
@@ -216,12 +218,9 @@ render() {
       glPushMatrix();
       glTranslatef(cx, cy, -5.0f); 
       glRotatef(a, 0.0f, 1.0f, 0.0f);
-      glBegin(GL_TRIANGLES);
-      for ((vi = 0); vi < vertices_count; vi++) {
-          glColor3f(0, 1, 0);
-          glVertex3f(vertices[vi][0], vertices[vi][1], vertices[vi][2]);
-      }
-      glEnd();
+      //glBegin(GL_TRIANGLES);
+      drawm(tp);
+      //glEnd();
       glPopMatrix();
 			glXSwapBuffers(display, window);
       XSync(display, 0);
@@ -245,6 +244,7 @@ gkill() {
 	XDestroyWindow(display, window);
 	XCloseDisplay(display);
   killsfx();
+  killmesh(tp);
 }
 
 void foo() { printf("hi!\n"); }
