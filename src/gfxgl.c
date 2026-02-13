@@ -14,8 +14,8 @@
 #include "sfxalsa.h"
 #include "event.h"
 
-#define WWIDTH 800
-#define WHEIGHT 600
+int WWIDTH;
+int WHEIGHT;
 
 Display *display;
 Window window;
@@ -87,6 +87,22 @@ drawm(const Mesh *m) {
 }
 
 void
+resizegl() {
+  float ar, fovy, fh, fw;
+  if (WHEIGHT == 0) { WHEIGHT = 1; }
+  glViewport(0, 0, WWIDTH, WHEIGHT);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  ar = (float)WWIDTH/(float)WHEIGHT;
+  fovy = 45.0f;
+  fh = tanf(fovy * 0.5f * (M_PI / 180.f)) * 0.1f;
+  fw = fh * ar;
+  glFrustum(-fw, fw, -fh, fh, 0.1f, 100.0f);
+
+  glMatrixMode(GL_MODELVIEW);
+}
+
+void
 ginit() {
   float top, bottom, right, left;
   double fovyrad;
@@ -102,6 +118,8 @@ ginit() {
   tri.x1 = 0.0f; tri.y1 = 100.0f;
   tri.x2 = -75.0f; tri.y2 = -50.0f;
   tri.x3 = 75.0f; tri.y3 = -50.0f;
+  WWIDTH = 800;
+  WHEIGHT = 600;
 
   tp = loadobj("assets/teapot.obj");
 
@@ -123,7 +141,7 @@ ginit() {
     );
   XGetWindowAttributes(display, window, &wa);
   XSetWMProtocols(display, window, &wmdelwin, 1);
-  XSelectInput(display, window, StructureNotifyMask|KeyPressMask|PointerMotionMask);
+  XSelectInput(display, window, swa.event_mask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
   glc = glXCreateContext(display, vi, NULL, 1);
   if (!glc) { printf("Could not create opengl context!\n"); return; }
@@ -132,7 +150,7 @@ ginit() {
   //glXWaitX();
   //XSync(display, 0);
   glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
-  glViewport(0, 0, WWIDTH, WHEIGHT);
+  glViewport(0, 0, (int)WWIDTH, (int)WHEIGHT);
   fovyrad = 60.0f * (M_PI / 180.0f);
   top = tanf((float)fovyrad * 0.5f) * 0.1f;
   bottom = -top;
@@ -150,7 +168,7 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit;
+  int quit, newwh, newww;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
   float camyaw;
@@ -167,6 +185,10 @@ render() {
     while (XPending(display) > 0) {
       XNextEvent(display, &ev);
       switch (ev.type) {
+        case ConfigureNotify:
+          WWIDTH = ev.xconfigure.width;
+          WHEIGHT = ev.xconfigure.height;
+          resizegl();
         case KeyPress:
         switch (XLookupKeysym(&ev.xkey, 0)) {
           case 'q':
