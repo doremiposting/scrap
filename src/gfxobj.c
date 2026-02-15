@@ -47,11 +47,11 @@ loadobj(const char *fn) {
   if (!f) { return NULL; }
 
   objcnt(f, &vc, &vtc, &vnc, &fc);
-  pos = calloc(vc, sizeof(Vec3f));
-  norm = calloc(vnc, sizeof(Vec3f));
-  uv = calloc(vtc, sizeof(Vec2f));
+  pos = calloc((size_t)(vc), sizeof(Vec3f));
+  norm = calloc((size_t)(vnc), sizeof(Vec3f));
+  uv = calloc((size_t)(vtc), sizeof(Vec2f));
 
-  out = calloc(3*fc, sizeof(Vertex));
+  out = calloc((size_t)(3*fc), sizeof(Vertex));
   pi = ni = ti = oi = 0;
 
   while (saferead(f, line, sizeof(line))) {
@@ -105,7 +105,7 @@ loadobj(const char *fn) {
   
   m = calloc(1, sizeof(Mesh));
   m->v = out;
-  m->cnt = oi;
+  m->cnt = (unsigned int)(oi);
   return m;
 }
 

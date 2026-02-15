@@ -160,7 +160,7 @@ playsfx(long long elapsed) {
     triggers[i].on = 0;
   }
 
-  memset(mixbuffer, 0, mixtime * chnls * sizeof(short));
+  memset(mixbuffer, 0, (size_t)(mixtime * chnls) * sizeof(short));
 
   for (v = 0; v < MAXVCS; v++) {
     voice = &voices[v];
@@ -170,13 +170,13 @@ playsfx(long long elapsed) {
     if (!sfx || !sfx->pcm) { voice->active = 0; continue; }
 
     mixableframes = mixtime;
-    remainingframes = sfx->frames - voice->position;
+    remainingframes = (snd_pcm_sframes_t)(sfx->frames - voice->position);
     if (mixableframes > remainingframes) { mixableframes = remainingframes; }
 
     for (f = 0; (long)(f) < mixableframes; f++) {
       for (ch = 0; ch < chnls; ch++) {
-        mixi = (size_t)(f * chnls + ch);
-        srci = (voice->position + f) * chnls + ch;
+        mixi = (size_t)(f) * (size_t)(chnls) + (size_t)(ch);
+        srci = (voice->position + f) * (size_t)chnls + (size_t)ch;
 
         mixed = mixbuffer[mixi] + sfx->pcm[srci];
         /* TODO: Don't use magic numbers here. */

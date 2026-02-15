@@ -33,6 +33,8 @@ double da;
 GLXContext glc;
 Colormap cmap;
 Mesh *tp;
+static float fovy;
+int pausesim;
 
 #define EVTICKNS 600000000LL
 #define GFXTICKNS 16666667LL
@@ -76,7 +78,7 @@ void lookat(float ex, float ey, float ez,
 
 void
 drawm(const Mesh *m) {
-  int i;
+  unsigned int i;
   glBegin(GL_TRIANGLES);
   for (i = 0; i < m->cnt; i++) {
     glNormal3f(m->v[i].nx, m->v[i].ny, m->v[i].nz);
@@ -88,14 +90,13 @@ drawm(const Mesh *m) {
 
 void
 resizegl() {
-  float ar, fovy, fh, fw;
+  float ar, fh, fw;
   if (WHEIGHT == 0) { WHEIGHT = 1; }
   glViewport(0, 0, WWIDTH, WHEIGHT);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   ar = (float)WWIDTH/(float)WHEIGHT;
-  fovy = 45.0f;
-  fh = tanf(fovy * 0.5f * (M_PI / 180.f)) * 0.1f;
+  fh = tanf(fovy * 0.5f * ((float)(M_PI) / 180.f)) * 0.1f;
   fw = fh * ar;
   glFrustum(-fw, fw, -fh, fh, 0.1f, 100.0f);
 
@@ -128,7 +129,7 @@ ginit() {
   GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
   vi = glXChooseVisual(display, DefaultScreen(display), att);
   if (!vi) { printf("No valid visual found\n"); return; }
-  else { printf("visual: %p\n", vi->visualid); }
+  else { printf("visual: %ld\n", vi->visualid); }
   cmap = XCreateColormap(display, XRootWindow(display, vi->screen), vi->visual, AllocNone);
   wmdelwin = XInternAtom(display, "WM_DELETE_WINDOW", False);
   swa.colormap = cmap; swa.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
@@ -136,7 +137,7 @@ ginit() {
     display,
     XRootWindow(display, vi->screen),
     0, 0,
-    WWIDTH, WHEIGHT, 0,
+    (unsigned int)WWIDTH, (unsigned int)WHEIGHT, 0,
     vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa
     );
   XGetWindowAttributes(display, window, &wa);
@@ -151,7 +152,8 @@ ginit() {
   //XSync(display, 0);
   glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
   glViewport(0, 0, (int)WWIDTH, (int)WHEIGHT);
-  fovyrad = 60.0f * (M_PI / 180.0f);
+  fovy = 60.0f;
+  fovyrad = fovy * (M_PI / 180.0f);
   top = tanf((float)fovyrad * 0.5f) * 0.1f;
   bottom = -top;
   right = top * (float)(WWIDTH / WHEIGHT);
@@ -177,6 +179,7 @@ render() {
   camyaw = 0.0f;
   GETNS(thene);
   GETNS(thenr);
+  pausesim = 0;
   while (!quit) {
     /* TODO: Pending events should be queued in realtime but executed in ticktime */
     /* Next loop should addevent() a queue of events which then get popped off with */
@@ -189,10 +192,16 @@ render() {
           WWIDTH = ev.xconfigure.width;
           WHEIGHT = ev.xconfigure.height;
           resizegl();
+          break;
         case KeyPress:
         switch (XLookupKeysym(&ev.xkey, 0)) {
           case 'q':
+          case XK_Escape:
             quit = 1;
+            break;
+          case 'p':
+          case XK_Pause:
+            pausesim = !pausesim;
             break;
           default:
             break;
@@ -248,11 +257,13 @@ render() {
       XSync(display, 0);
       glFlush();
       playsfx(elapsedr);
-      a += 3.0f;
-      cx += (dx*(float)mmx);
-      if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); }
-      cy += (dx*(float)mmy);
-      if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; triggersfx(SFX_BOOM, 1); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; triggersfx(SFX_BOOM, 1); }
+      if (!pausesim) {
+        a += 3.0f;
+        cx += (dx*(float)mmx);
+        if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); }
+        cy += (dx*(float)mmy);
+        if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; triggersfx(SFX_BOOM, 1); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; triggersfx(SFX_BOOM, 1); }
+      }
       GETNS(thenr);
     }
   }
