@@ -34,7 +34,7 @@ GLXContext glc;
 Colormap cmap;
 Mesh *tp;
 static float fovy;
-int pausesim;
+int pausesim, wiremesh;
 
 #define EVTICKNS 600000000LL
 #define GFXTICKNS 16666667LL
@@ -79,6 +79,8 @@ void lookat(float ex, float ey, float ez,
 void
 drawm(const Mesh *m) {
   unsigned int i;
+  wiremesh ? glPolygonMode(GL_FRONT, GL_LINE)
+    : glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_TRIANGLES);
   for (i = 0; i < m->cnt; i++) {
     glNormal3f(m->v[i].nx, m->v[i].ny, m->v[i].nz);
@@ -123,6 +125,7 @@ ginit() {
   WHEIGHT = 600;
 
   tp = loadobj("assets/teapot.obj");
+  /* tp = loadobj("assets/teapottri.obj"); */
 
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
@@ -163,6 +166,9 @@ ginit() {
   glFrustum(left, right, bottom, top, 0.1f, 1000.0f); // TODO: Update frustum on window resize
   //glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
   glMatrixMode(GL_MODELVIEW);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
   XMapWindow(display, window);
   initsfx();
 }
@@ -170,16 +176,13 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit, newwh, newww;
+  int quit;
   struct timespec thene, thenr, nowe, nowr;
   long long elapsede, elapsedr;
-  float camyaw;
-  int vi;
   quit = 0;
-  camyaw = 0.0f;
   GETNS(thene);
   GETNS(thenr);
-  pausesim = 0;
+  pausesim = 0; wiremesh = 0;
   while (!quit) {
     /* TODO: Pending events should be queued in realtime but executed in ticktime */
     /* Next loop should addevent() a queue of events which then get popped off with */
@@ -195,6 +198,9 @@ render() {
           break;
         case KeyPress:
         switch (XLookupKeysym(&ev.xkey, 0)) {
+          case 'w':
+            wiremesh = !wiremesh;
+            break;
           case 'q':
           case XK_Escape:
             quit = 1;
@@ -226,8 +232,8 @@ render() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
-			//glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
+			/* glClearColor(0.0f, 0.0f, 0.0f, 1.0f); */
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
@@ -249,9 +255,7 @@ render() {
       glPushMatrix();
       glTranslatef(cx, cy, -5.0f); 
       glRotatef(a, 0.0f, 1.0f, 0.0f);
-      //glBegin(GL_TRIANGLES);
       drawm(tp);
-      //glEnd();
       glPopMatrix();
 			glXSwapBuffers(display, window);
       XSync(display, 0);
