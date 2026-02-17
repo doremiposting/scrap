@@ -89,6 +89,8 @@ main(int argc, char *argv[]) {
   compilefile("src/event.c", "build/event.o");
 #if defined(__GNUC__) 
   boilerplate();
+  cmd_append(&cmd, "-lpthread");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
   compilefile("src/sfxalsa.c", "build/sfxalsa.o");
 #endif
   boilerplate();
@@ -101,7 +103,7 @@ main(int argc, char *argv[]) {
 
 #if defined(__GNUC__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap.gl",
-    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lasound", "-lmpg123",
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lasound", "-lmpg123", "-lpthread",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o", "build/sfxalsa.o",
     "build/gfxobj.o");
 	if (!cmd_run(&cmd)) { return 1; }

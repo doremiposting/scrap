@@ -3,8 +3,11 @@
 #include <unistd.h>
 #include <alsa/asoundlib.h>
 #include <mpg123.h>
+#include <pthread.h>
+#include <time.h>
 
 #include "sfxalsa.h"
+#include "main.h"
 
 Aout *ao;
 mpg123_handle *mh;
@@ -21,6 +24,29 @@ Voice *voices;
 static unsigned int voicecnt;
 #define MIXFRAMES 736
 static short *mixbuffer;
+static pthread_t sfxthread;
+static volatile int sfxrunning;
+static pthread_mutex_t sfxmutex;
+
+int playsfx(long long elapsed);
+
+static void *
+sfxloop(void *arg) {
+  struct timespec tt, tn;
+  long long elapsed;
+  clock_gettime(CLOCK_MONOTONIC, &tt);
+
+  while (sfxrunning) {
+    clock_gettime(CLOCK_MONOTONIC, &tn);
+    elapsed = (tn.tv_sec - tt.tv_sec) * 1000000000LL + (tn.tv_nsec - tt.tv_nsec);
+    tt = tn;
+
+    playsfx(elapsed);
+    usleep(1000);
+  }
+  UNUSED(arg);
+  return NULL;
+}
 
 Soundfx *
 newsnd() {
@@ -29,12 +55,11 @@ newsnd() {
   unsigned char *a;
   size_t cap;
   unsigned char b[8196];
-  int r, i;
+  int r;
   /* s = calloc(SFX_COUNT, sizeof(Soundfx)); */
+  sfxrunning = 0;
+  pthread_mutex_init(&sfxmutex, NULL);
   ss = calloc(1, sizeof(Soundfx));
-  voices = calloc(MAXVCS, sizeof(Voice));
-  voicecnt = 0;
-  for (i = 0 ; i < SFX_COUNT ; i++) { triggers[i].on = 0; triggers[i].cut = 0; }
   a = NULL; cap = 0;
   ss->rate = (int)rate; /* TODO: Should the struct member be changed to long? */
   ss->chnls = chnls;
@@ -53,6 +78,7 @@ newsnd() {
 
 int
 initsfx() {
+  int i;
   mpg123_init();
   mh = mpg123_new(NULL, &error);
   mpg123_open(mh, "assets/vine boom.mp3");
@@ -65,6 +91,10 @@ initsfx() {
   
   /* TODO: newsnd() exists, but it needs to take a const char* for passing file paths.. */
   s[SFX_BOOM] = newsnd();
+
+  voices = calloc(MAXVCS, sizeof(Voice));
+  voicecnt = 0;
+  for (i = 0 ; i < SFX_COUNT ; i++) { triggers[i].on = 0; triggers[i].cut = 0; }
 
   ao = calloc(1, sizeof(Aout));
   if (!ao) { return -1; }
@@ -89,12 +119,16 @@ initsfx() {
   ao->rate = (int)rate;
   ao->chnls = chnls;
 
+  sfxrunning = 1;
+  pthread_create(&sfxthread, NULL, sfxloop, NULL);
   return rc;
 }
 
 void
 triggersfx(SfxID id, int cut) {
+  pthread_mutex_lock(&sfxmutex);
   if (!triggers[id].on) { triggers[id].on = 1; triggers[id].cut = cut; }
+  pthread_mutex_unlock(&sfxmutex);
 }
 
 int
@@ -128,6 +162,7 @@ playsfx(long long elapsed) {
     avail = snd_pcm_avail_update(ao->pcm);
   }
   
+  pthread_mutex_lock(&sfxmutex);
   for (i = 0; i < SFX_COUNT; i++) {
     if (!triggers[i].on) { continue; }
     sfx = s[i];
@@ -159,6 +194,8 @@ playsfx(long long elapsed) {
 
     triggers[i].on = 0;
   }
+  pthread_mutex_unlock(&sfxmutex);
+  
 
   memset(mixbuffer, 0, (size_t)(mixtime * chnls) * sizeof(short));
 
@@ -206,6 +243,9 @@ playsfx(long long elapsed) {
 
 void
 killsfx() {
+  sfxrunning = 0;
+  pthread_join(sfxthread, NULL);
+
   snd_pcm_drain(ao->pcm);
   snd_pcm_close(ao->pcm);
 

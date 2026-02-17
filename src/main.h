@@ -20,4 +20,6 @@
   xs.items[xs.count++] = x;\
 } while (0)
 
+#define UNUSED(x) (void)(x)
+
 #endif /* MAIN_H */

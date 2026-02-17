@@ -260,7 +260,6 @@ render() {
 			glXSwapBuffers(display, window);
       XSync(display, 0);
       glFlush();
-      playsfx(elapsedr);
       if (!pausesim) {
         a += 3.0f;
         cx += (dx*(float)mmx);

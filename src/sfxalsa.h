@@ -39,7 +39,6 @@ typedef struct {
 
 int initsfx();
 void triggersfx(SfxID id, int cut);
-int playsfx(long long elapsed);
 void killsfx();
 
 #endif /* SFXALSA_H */
