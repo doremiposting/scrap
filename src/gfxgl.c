@@ -112,6 +112,21 @@ void
 ginit() {
   float top, bottom, right, left;
   double fovyrad;
+  int fbcnt;
+  GLXFBConfig *fbcs, bestfbc;
+  int visattribs[] = {
+    GLX_X_RENDERABLE, 1,
+    GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+    GLX_RENDER_TYPE, GLX_RGBA_BIT,
+    GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+    GLX_BLUE_SIZE, 8,
+    GLX_GREEN_SIZE, 8,
+    GLX_RED_SIZE, 8,
+    GLX_ALPHA_SIZE, 8,
+    GLX_DEPTH_SIZE, 24,
+    GLX_DOUBLEBUFFER, 1,
+    None
+  };
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = 0.0f;
@@ -132,8 +147,13 @@ ginit() {
 
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
-  GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
-  vi = glXChooseVisual(display, DefaultScreen(display), att);
+  fbcs = glXChooseFBConfig(display, DefaultScreen(display), visattribs, &fbcnt);
+  fprintf(stderr, "fbcs available: %d\n", fbcnt);
+  if (!fbcs || fbcnt == 0) { fprintf(stderr, "No valid fbconfig found!\n"); exit(1); }
+  bestfbc = fbcs[0];
+  /* GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None}; */
+  /* vi = glXChooseVisual(display, DefaultScreen(display), att); */
+  vi = glXGetVisualFromFBConfig(display, bestfbc);
   if (!vi) { printf("No valid visual found\n"); return; }
   else { printf("visual: %ld\n", vi->visualid); }
   cmap = XCreateColormap(display, XRootWindow(display, vi->screen), vi->visual, AllocNone);
@@ -150,8 +170,13 @@ ginit() {
   XSetWMProtocols(display, window, &wmdelwin, 1);
   XSelectInput(display, window, swa.event_mask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
-  glc = glXCreateContext(display, vi, NULL, 1);
-  if (!glc) { printf("Could not create opengl context!\n"); return; }
+  glc = glXCreateNewContext(display, bestfbc, GLX_RGBA_TYPE, NULL, True);
+  if (!glc) {
+    glc = glXCreateContext(display, vi, NULL, True);
+    if (!glc) {
+      fprintf(stderr, "GLX context could not be created!\n");
+    }
+  }
   printf("Context created: %p  Is direct? %s\n",
        glc, glXIsDirect(display, glc) ? "yes" : "no (indirect)");
   //glXWaitX();
@@ -162,7 +187,7 @@ ginit() {
   fovyrad = fovy * (M_PI / 180.0f);
   top = tanf((float)fovyrad * 0.5f) * 0.1f;
   bottom = -top;
-  right = top * (float)(WWIDTH / WHEIGHT);
+  right = top * ((float)WWIDTH / (float)WHEIGHT);
   left = -right;
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -173,6 +198,8 @@ ginit() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   XMapWindow(display, window);
+  XFree(fbcs);
+  XFree(vi);
   initsfx();
 }
 
@@ -183,8 +210,8 @@ render() {
   struct timespec thene, thenr, nowe, nowr, frmst, frmend;
   long long elapsede, elapsedr;
   quit = 0;
-  GETNS(thene);
-  GETNS(thenr);
+  GETNS(thene); GETNS(thenr);
+  GETNS(frmst); GETNS(frmend);
   pausesim = 0; wiremesh = 0; doprofile = 1;
   while (!quit) {
     /* TODO: Somehow we need to translate engine inputs, handled immediately, */
@@ -237,6 +264,7 @@ render() {
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
       if (doprofile) { GETNS(frmst); }
+      thenr = nowr;
 			glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 			/* glClearColor(0.0f, 0.0f, 0.0f, 1.0f); */
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -272,10 +300,9 @@ render() {
         cy += (dx*(float)mmy);
         if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; triggersfx(SFX_BOOM, 1); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; triggersfx(SFX_BOOM, 1); }
       }
-      GETNS(thenr);
       if (doprofile) {
         GETNS(frmend);
-        fprintf(stderr, "\rFPS: %.2f", (1000000000.0 /((double)DIFFNS(frmst, frmend))));
+        fprintf(stderr, "\rFPS: %.2f, FT: %lld us", (1000000000.0 /((double)(elapsedr))), DIFFNS(frmst, frmend)/1000);
         fflush(stderr);
       }
     }
@@ -284,7 +311,7 @@ render() {
 
 void
 gkill() {
-  fprintf(stderr, "\rDone.     \n");
+  fprintf(stderr, "\rDone.                    \n");
   /* TODO: free() roundup from ginit(). */
 	glXMakeCurrent(display, None, NULL);
 	glXDestroyContext(display, glc);
