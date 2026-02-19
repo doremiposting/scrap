@@ -36,6 +36,9 @@ Mesh *tp;
 static float fovy;
 int pausesim, wiremesh;
 
+typedef GLXContext (*glXCreateContextAttribsARBProc)(
+    Display*, GLXFBConfig, GLXContext, Bool, const int*);
+
 #define EVTICKNS 600000000LL
 #define GFXTICKNS 16666667LL
 #define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -176,18 +179,16 @@ ginit() {
 void
 render() {
   XEvent ev;
-  int quit;
-  struct timespec thene, thenr, nowe, nowr;
+  int quit, doprofile;
+  struct timespec thene, thenr, nowe, nowr, frmst, frmend;
   long long elapsede, elapsedr;
   quit = 0;
   GETNS(thene);
   GETNS(thenr);
-  pausesim = 0; wiremesh = 0;
+  pausesim = 0; wiremesh = 0; doprofile = 1;
   while (!quit) {
-    /* TODO: Pending events should be queued in realtime but executed in ticktime */
-    /* Next loop should addevent() a queue of events which then get popped off with */
-    /* handlenext() dispatching back to x11. EXCEPT FOR QUIT, WHICH SHOULD ALWAYS */
-    /* TAKE IMMEDIATE PRIORITY. */
+    /* TODO: Somehow we need to translate engine inputs, handled immediately, */
+    /* into game inputs, handled on a per-tick basis. */
     while (XPending(display) > 0) {
       XNextEvent(display, &ev);
       switch (ev.type) {
@@ -198,6 +199,9 @@ render() {
           break;
         case KeyPress:
         switch (XLookupKeysym(&ev.xkey, 0)) {
+          case 'f':
+            doprofile = !doprofile;
+            break;
           case 'w':
             wiremesh = !wiremesh;
             break;
@@ -232,6 +236,7 @@ render() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
+      if (doprofile) { GETNS(frmst); }
 			glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 			/* glClearColor(0.0f, 0.0f, 0.0f, 1.0f); */
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -268,12 +273,18 @@ render() {
         if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; triggersfx(SFX_BOOM, 1); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; triggersfx(SFX_BOOM, 1); }
       }
       GETNS(thenr);
+      if (doprofile) {
+        GETNS(frmend);
+        fprintf(stderr, "\rFPS: %.2f", (1000000000.0 /((double)DIFFNS(frmst, frmend))));
+        fflush(stderr);
+      }
     }
   }
 }
 
 void
 gkill() {
+  fprintf(stderr, "\rDone.     \n");
   /* TODO: free() roundup from ginit(). */
 	glXMakeCurrent(display, None, NULL);
 	glXDestroyContext(display, glc);
