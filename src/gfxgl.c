@@ -18,9 +18,10 @@ int WWIDTH;
 int WHEIGHT;
 
 Display *display;
+int screen;
 Window window;
 XWindowAttributes wa = {0};
-XSetWindowAttributes swa;
+XSetWindowAttributes swa = {0};
 XVisualInfo *vi;
 XImage *i;
 GC gc;
@@ -45,6 +46,14 @@ typedef GLXContext (*glXCreateContextAttribsARBProc)(
 #define DIFFNS(start, end) \
     ((int64_t)((end).tv_sec - (start).tv_sec) * 1000000000LL + \
      ((end).tv_nsec - (start).tv_nsec))
+
+static int glxctxerr;
+static int
+glxctxerrhandler(Display *d, XErrorEvent *e) {
+    (void)d; (void)e;
+    glxctxerr = 1;
+    return 0;
+}
 
 void lookat(float ex, float ey, float ez,
              float cx, float cy, float cz,
@@ -95,14 +104,13 @@ drawm(const Mesh *m) {
 
 void
 resizegl() {
-  float ar, fh, fw;
+  float fh, fw;
   if (WHEIGHT == 0) { WHEIGHT = 1; }
   glViewport(0, 0, WWIDTH, WHEIGHT);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  ar = (float)WWIDTH/(float)WHEIGHT;
   fh = tanf(fovy * 0.5f * ((float)(M_PI) / 180.f)) * 0.1f;
-  fw = fh * ar;
+  fw = fh * (float)WWIDTH/(float)WHEIGHT;
   glFrustum(-fw, fw, -fh, fh, 0.1f, 100.0f);
 
   glMatrixMode(GL_MODELVIEW);
@@ -112,7 +120,10 @@ void
 ginit() {
   float top, bottom, right, left;
   double fovyrad;
-  int fbcnt;
+  int fbcnt, i, j, smplbfrs, smpls, bestsmpls, dtype;
+	int tdt, trt, tdb, tdep, tr, tg, tb, ta, tsb, tsamp;
+  int tsel, seldt, selrt, seldb, seldep, selsb;
+  int maj, min, usert, actualrt;
   GLXFBConfig *fbcs, bestfbc;
   int visattribs[] = {
     GLX_X_RENDERABLE, 1,
@@ -124,9 +135,16 @@ ginit() {
     GLX_RED_SIZE, 8,
     GLX_ALPHA_SIZE, 8,
     GLX_DEPTH_SIZE, 24,
-    GLX_DOUBLEBUFFER, 1,
+    GLX_DOUBLEBUFFER, True,
     None
   };
+  /*
+  int ctxattribs[] = {
+    GLX_CONTEXT_MAJOR_VERSION_ARB, 2,
+    GLX_CONTEXT_MINOR_VERSION_ARB, 1,
+    None
+  };
+  */
   a = 0.0f;
   da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
   cx = 0.0f;
@@ -142,18 +160,72 @@ ginit() {
   WWIDTH = 800;
   WHEIGHT = 600;
 
+  glxctxerr = 0;
+
   tp = loadobj("assets/teapot.obj");
   /* tp = loadobj("assets/teapottri.obj"); */
 
   display = XOpenDisplay(NULL);
   if (!display) { fprintf(stderr, "ERROR: Couldn't open display!\n"); exit(1); }
-  fbcs = glXChooseFBConfig(display, DefaultScreen(display), visattribs, &fbcnt);
-  fprintf(stderr, "fbcs available: %d\n", fbcnt);
+  screen = 0; /* DeafultScreen(display) */
+  printf("GLX vendor: %s\n", glXGetClientString(display, GLX_VENDOR));
+  glXQueryVersion(display, &maj, &min);
+  glXQueryExtensionsString(display, screen);
+  /*
+	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB =
+  	(void*)glXGetProcAddressARB(
+      (const GLubyte*)"glXCreateContextAttribsARB");
+  */
+  fbcs = glXChooseFBConfig(display, screen, visattribs, &fbcnt);
   if (!fbcs || fbcnt == 0) { fprintf(stderr, "No valid fbconfig found!\n"); exit(1); }
-  bestfbc = fbcs[0];
-  /* GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None}; */
-  /* vi = glXChooseVisual(display, DefaultScreen(display), att); */
-  vi = glXGetVisualFromFBConfig(display, bestfbc);
+  else {
+		fprintf(stderr, "fbcs available: %d\n", fbcnt);
+		for (j = 0; j < fbcnt && j < 5; j++) {
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_DRAWABLE_TYPE,  &tdt);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_RENDER_TYPE,    &trt);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_DOUBLEBUFFER,   &tdb);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_DEPTH_SIZE,     &tdep);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_RED_SIZE,       &tr);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_GREEN_SIZE,     &tg);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_BLUE_SIZE,      &tb);
+		    glXGetFBConfigAttrib(display, fbcs[j], GLX_ALPHA_SIZE,     &ta);
+		    fprintf(stderr, "[%d] drawable=%d render_type=%d db=%d depth=%d rgba=%d%d%d%d\n",
+		            j, tdt, trt, tdb, tdep, tr, tg, tb, ta);
+		}
+    bestfbc = 0;
+    bestsmpls = -1;
+    tsel = -1;
+    for (j = 0; j < fbcnt; j++) {
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_RENDER_TYPE,    &trt);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_DRAWABLE_TYPE,  &tdt);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_DOUBLEBUFFER,   &tdb);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_DEPTH_SIZE,     &tdep);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_SAMPLE_BUFFERS, &tsb);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_SAMPLES,        &tsamp);
+    	glXGetFBConfigAttrib(display, fbcs[j], GLX_RED_SIZE,       &tr);
+
+    	if (!(trt  & GLX_RGBA_BIT))   continue;
+    	if (!(tdt  & GLX_WINDOW_BIT)) continue;
+    	if (!tdb)                     continue;
+    	if (tdep < 24)                continue;
+    	if (tr   < 8)                 continue;
+    	if (tsel >= 0 && tsamp >= bestsmpls) continue;  /* prefer no multisampling */
+      tsel = j; seldt = tdt; selrt = trt; seldb = tdb; seldep = tdep; selsb = tsb;
+    	bestsmpls = tsamp;
+    }
+    bestfbc = fbcs[tsel];
+    fprintf(stderr, "Selected fbconfig: %d: dt: %d, rt: %d, db: %d, dp: %d, sb: %d\n", tsel, seldt, selrt, seldb, seldep, selsb);
+    if (!(bestfbc)) {
+      fprintf(stderr, "No suitable fbconfig found!\n");
+      exit(1);
+    } else {
+      glXGetFBConfigAttrib(display, bestfbc, GLX_DRAWABLE_TYPE, &dtype);
+      fprintf(stderr, "drawable type: %x\n", dtype);
+    }
+  }
+  GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
+  vi = glXChooseVisual(display, DefaultScreen(display), att);
+  /* vi = glXGetVisualFromFBConfig(display, bestfbc); */
   if (!vi) { printf("No valid visual found\n"); return; }
   else { printf("visual: %ld\n", vi->visualid); }
   cmap = XCreateColormap(display, XRootWindow(display, vi->screen), vi->visual, AllocNone);
@@ -161,26 +233,41 @@ ginit() {
   swa.colormap = cmap; swa.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
   window = XCreateWindow(
     display,
-    XRootWindow(display, vi->screen),
+    XRootWindow(display, screen),
     0, 0,
     (unsigned int)WWIDTH, (unsigned int)WHEIGHT, 0,
     vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa
-    );
+  );
+  XSync(display, 0);
   XGetWindowAttributes(display, window, &wa);
   XSetWMProtocols(display, window, &wmdelwin, 1);
   XSelectInput(display, window, swa.event_mask|PointerMotionMask);
   XStoreName(display, window, "Scrap");
-  glc = glXCreateNewContext(display, bestfbc, GLX_RGBA_TYPE, NULL, True);
-  if (!glc) {
-    glc = glXCreateContext(display, vi, NULL, True);
+  XMapWindow(display, window);
+  XSync(display, 0);
+  int (*oldxerr)(Display*, XErrorEvent*) = XSetErrorHandler(glxctxerrhandler);
+  actualrt = 0;
+  glXGetFBConfigAttrib(display, bestfbc, GLX_RENDER_TYPE, &actualrt);
+  usert = (actualrt & GLX_RGBA_BIT) ? GLX_RGBA_TYPE : GLX_COLOR_INDEX_TYPE;
+  glc = NULL;
+  glxctxerr = 0;
+  glc = glXCreateNewContext(display, bestfbc, usert, NULL, 1);
+  XSync(display, 0);
+  /* glc = glXCreateContextAttribsARB(display, bestfbc, NULL, True, ctxattribs); */
+  if (glxctxerr || !glc) {
+    fprintf(stderr, "glXCreateNewContext failed (render type=0x%x), trying glXCreateContext\n", usert);
+    glxctxerr = 0;
+    glc = glXCreateContext(display, vi, NULL, 1);
+    XSync(display, 0);
     if (!glc) {
       fprintf(stderr, "GLX context could not be created!\n");
+      exit(1);
     }
   }
+  XSetErrorHandler(oldxerr);
   printf("Context created: %p  Is direct? %s\n",
-       glc, glXIsDirect(display, glc) ? "yes" : "no (indirect)");
+       (void*)glc, glXIsDirect(display, glc) ? "yes" : "no (indirect)");
   //glXWaitX();
-  //XSync(display, 0);
   glXMakeCurrent(display, window, glc) ? printf("bound gl context to window\n") : printf("Could not make gl context current\n");
   glViewport(0, 0, (int)WWIDTH, (int)WHEIGHT);
   fovy = 60.0f;
@@ -197,7 +284,6 @@ ginit() {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
-  XMapWindow(display, window);
   XFree(fbcs);
   XFree(vi);
   initsfx();
