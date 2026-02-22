@@ -22,4 +22,11 @@
 
 #define UNUSED(x) (void)(x)
 
+#define EVTICKNS 600000000LL
+#define GFXTICKNS 16666667LL
+#define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
+#define DIFFNS(start, end) \
+    ((int64_t)((end).tv_sec - (start).tv_sec) * 1000000000LL + \
+     ((end).tv_nsec - (start).tv_nsec))
+
 #endif /* MAIN_H */

@@ -3,12 +3,10 @@
 
 #include "gfxobj.h"
 
-typedef struct {
-  float x1, y1, x2, y2, x3, y3;
-} Tri2df;
+extern int pausesim, wiremesh, doprofile;
 
 void drawm(const Mesh *m);
-
+void resizegl();
 void ginit();
 void render();
 void gkill();
