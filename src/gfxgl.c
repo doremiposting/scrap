@@ -87,6 +87,16 @@ resizegl() {
 
 void
 ginit() {
+  tp = loadobj("assets/teapot.obj");
+  a = 0.0f;
+  da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
+  cx = 0.0f;
+  cy = 0.0f;
+  dx = 0.05f;
+  dy = 0.05f;
+  mmx = 1;
+  mmy = 1;
+  rad = 0.75;
   float top, bottom, right, left;
   double fovyrad;
   pausesim = 0; wiremesh = 0; doprofile = 1;

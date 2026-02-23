@@ -99,7 +99,7 @@ winit() {
     bestsmpls = tsamp;
     break;
   }
-  tsel = 0;
+  /* tsel = 0; */
   bestfbc = fbcs[tsel];
   fprintf(stderr, "Selected fbconfig: %d: dt: %d, rt: %d, db: %d, dp: %d, sb: %d\n", tsel, seldt, selrt, seldb, seldep, selsb);
 	glXGetFBConfigAttrib(display, fbcs[tsel], GLX_DRAWABLE_TYPE,  &tdt);
@@ -249,6 +249,7 @@ winloop() {
 
 void
 wkill() {
+  gkill();
   /* TODO: free() roundup from ginit(). */
 	glXMakeCurrent(display, None, NULL);
 	glXDestroyContext(display, glc);
