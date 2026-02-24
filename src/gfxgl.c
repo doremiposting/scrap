@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
 #include <time.h>
 
 #include <GL/gl.h>
@@ -10,9 +9,17 @@
 
 #include "gfx.h"
 #include "gfxgl.h"
+#ifdef __linux__
 #include "wx11.h"
+#elifdef __APPLE__
+#include "wcocoa.h"
+#endif
 #include "gfxobj.h"
+#ifdef __linux__
 #include "sfxalsa.h"
+#elifdef __APPLE__
+#include "sfxcore.h"
+#endif
 #include "event.h"
 
 float a;
@@ -149,9 +156,8 @@ render() {
   glRotatef(a, 0.0f, 1.0f, 0.0f);
   drawm(tp);
   glPopMatrix();
-	glXSwapBuffers(display, window);
-  XSync(display, 0);
-  glFlush();
+  flipbfrs();
+  /* glFlush(); */
   if (!pausesim) {
     a += 3.0f;
     cx += (dx*(float)mmx);

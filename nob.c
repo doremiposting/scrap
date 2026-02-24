@@ -11,7 +11,7 @@
   #define CC "msvc"
   #define forceinline __forceinline
 */
-#elif defined(__GNUC__)
+#elif defined(__linux__)
   #define CC "gcc"
   #define forceinline inline __attribute__((__always_inline__))
 #endif
@@ -50,35 +50,39 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-lm");
   compilefile("src/gfx.c", "build/gfx.o");
 
-  #ifdef __GNUC__
+  #ifdef __linux__
   boilerplate();
   cmd_append(&cmd, "-lX11");
   cmd_append(&cmd, "-lGLX");
   cmd_append(&cmd, "-D_GNU_SOURCE");
   compilefile("src/wx11.c", "build/wx11.o");
+  #else
+  boilerplate();
+  cmd_append(&cmd, "-framework", "Cocoa");
+  cmd_append(&cmd, "-framework", "OpenGL");
+  compilefile("src/wcocoa.c", "build/wcocoa.o");
   #endif
   
   boilerplate();
   #ifdef __APPLE__
   cmd_append(&cmd, "-I/opt/X11/include");
   cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
-  #else
-  cmd_append(&cmd, "-lX11");
-  cmd_append(&cmd, "-D_GNU_SOURCE");
-  #endif
+  #elifdef __linux__
   cmd_append(&cmd, "-lGL");
   cmd_append(&cmd, "-lGLX");
+  #endif
   compilefile("src/gfxgl.c", "build/gfxgl.o");
 
   boilerplate();
   #ifdef __APPLE__
   cmd_append(&cmd, "-I/opt/X11/include");
   cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
+  cmd_append(&cmd, "-framework", "OpenGL");
   #else
   cmd_append(&cmd, "-lX11");
   cmd_append(&cmd, "-D_GNU_SOURCE");
-  #endif
   cmd_append(&cmd, "-lGL");
+  #endif
   compilefile("src/gfxobj.c", "build/gfxobj.o");
 
   boilerplate();
@@ -87,21 +91,30 @@ main(int argc, char *argv[]) {
   compilefile("src/main.c", "build/main.o");
   boilerplate();
   compilefile("src/event.c", "build/event.o");
-#if defined(__GNUC__) 
+#if defined(__linux__) 
   boilerplate();
   cmd_append(&cmd, "-lpthread");
   cmd_append(&cmd, "-D_GNU_SOURCE");
   compilefile("src/sfxalsa.c", "build/sfxalsa.o");
-#endif
+#elif defined(__APPLE__)
   boilerplate();
-  cmd_append(&cmd, "--no-warnings");
-  compilefile("src/teapot.c", "build/teapot.o");
+  cmd_append(&cmd, "-framework", "AudioToolbox", "-framework", "AudioUnit",
+      "-framework", "CoreAudio");
+  compilefile("src/sfxcore.c", "build/sfxcore.o");
+#endif
 
-#if defined(__GNUC__)
+#if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lasound", "-lmpg123", "-lpthread",
-    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/teapot.o", "build/sfxalsa.o",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxalsa.o",
     "build/gfxobj.o", "build/wx11.o");
+	if (!cmd_run(&cmd)) { return 1; }
+#else
+	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-framework", "OpenGL", "-framework", "Cocoa", "-lpthread",
+    "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
+    "build/gfxobj.o", "build/wcocoa.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }

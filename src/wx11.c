@@ -40,6 +40,13 @@ glxctxerrhandler(Display *d, XErrorEvent *e) {
 }
 
 void
+flipbfrs() {
+  glXSwapBuffers(display, window);
+  XSync(display, 0);
+  glFlush();
+}
+
+void
 winit() {
   int fbcnt, i, j, k, smplbfrs, smpls, bestsmpls, dtype;
 	int tdt, trt, tdb, tdep, tr, tg, tb, ta, tsb, tsamp;

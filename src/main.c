@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #ifdef __APPLE__
-#include "gfx11.h"
+#include "wcocoa.h"
 #else
 #include "wx11.h"
 #include "gfxgl.h"
