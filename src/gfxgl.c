@@ -3,9 +3,13 @@
 #include <math.h>
 #include <time.h>
 
+#ifdef __linux__
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
+#elifdef __APPLE__
+#include <OpenGL/gl.h>
+#endif
 
 #include "gfx.h"
 #include "gfxgl.h"
