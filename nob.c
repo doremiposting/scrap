@@ -25,8 +25,9 @@ boilerplate() {
 		"-Wconversion", "-Wsign-conversion", "-Werror=format-security",
 		"-Wimplicit-fallthrough", "-Werror=implicit",
 		"-Werror=incompatible-pointer-types", "-Werror=int-conversion",
-    #ifndef __APPLE__
+    #if defined(__linux__)
 		"-Wtrampolines", "-fzero-init-padding-bits=all", "-Wbidi-chars=any",
+    "-D_POSIX_C_SOURCE=200809L", "-D_GNU_SOURCE"
 		#endif
 	);
 }
