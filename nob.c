@@ -104,11 +104,14 @@ main(int argc, char *argv[]) {
   compilefile("src/sfxcore.c", "build/sfxcore.o");
 #endif
 
+  boilerplate();
+  compilefile("src/vm.c", "build/vm.o");
+
 #if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lasound", "-lmpg123", "-lpthread",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxalsa.o",
-    "build/gfxobj.o", "build/wx11.o");
+    "build/gfxobj.o", "build/wx11.o", "build/vm.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #else
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",

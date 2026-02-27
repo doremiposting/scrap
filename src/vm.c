@@ -1,7 +1,8 @@
+#include <stdio.h>
 #include <stdint.h>
 
 #define VMREGCNT 16
-typedef int32_t vmreg
+typedef int32_t vmreg;
 #define VMCODEMAX 65536
 #define VMMEMMAX 65536
 typedef struct vm vm;
@@ -11,7 +12,7 @@ struct vm {
   const uint8_t *code;
   size_t ip;
   int running;
-  int (*host_call[32])(struct vm *);
+  int (*hostcall[32])(struct vm *);
 };
 typedef enum {
   OPHALT = 0,
@@ -24,10 +25,12 @@ typedef enum {
   OPCALLHOST,
 } opcode;
 
+int hostprint(vm *v);
+
 void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
-  int16 imm;
+  int16_t imm;
   v->running = 1;
   while (v->running) {
     op = v->code[v->ip++];
@@ -65,4 +68,26 @@ vmrun(vm *v) {
         break;
     }
   }
+}
+
+void
+vmtest() {
+  const uint8_t prog[] = {
+    OPLOADI, 1, 0, 10,
+    OPLOADI, 2, 0, 20,
+    OPADD, 3, 1, 2,
+    OPCALLHOST, 0, 0, 0,
+    OPHALT, 0, 0, 0
+  };
+  vm v = {0};
+  v.code = prog;
+  v.ip = 0;
+  v.hostcall[0] = hostprint;
+  vmrun(&v);
+}
+
+int
+hostprint(vm *v) {
+  fprintf(stderr, "r3 = %d\n", v->r[3]);
+  return 0;
 }
