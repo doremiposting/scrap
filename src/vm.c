@@ -22,6 +22,8 @@ typedef enum {
   OPSUB,
   OPMUL,
   OPDIV,
+  OPJMP,
+  OPJZ,
   OPCALLHOST,
 } opcode;
 
@@ -30,7 +32,7 @@ int hostprint(vm *v);
 void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
-  int16_t imm;
+  int16_t imm, offset;
   v->running = 1;
   while (v->running) {
     op = v->code[v->ip++];
@@ -60,6 +62,14 @@ vmrun(vm *v) {
       case OPDIV:
         v->r[A] = v->r[B] / v->r[C];
         break;
+      case OPJMP:
+        offset = (int16_t)((B << 8) | C);
+        v->ip += offset;
+        break;
+      case OPJZ:
+        offset = (int16_t)((B << 8) | C);
+        if (!(v->r[A])) { v->ip += offset; }
+        break;
       case OPCALLHOST:
         v->hostcall[A](v);
         break;
@@ -73,9 +83,13 @@ vmrun(vm *v) {
 void
 vmtest() {
   const uint8_t prog[] = {
-    OPLOADI, 1, 0, 10,
-    OPLOADI, 2, 0, 20,
-    OPADD, 3, 1, 2,
+    OPLOADI, 1, 0, 5,
+    OPLOADI, 2, 0, 1,
+    OPSUB,   1, 1, 2,
+    OPJZ,    1, 0, 12,
+    OPMOV, 3, 1, 0,
+    OPCALLHOST, 0, 0, 0,
+    OPJMP,   0, 0xFF, 0xEC,
     OPCALLHOST, 0, 0, 0,
     OPHALT, 0, 0, 0
   };
