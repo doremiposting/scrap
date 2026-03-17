@@ -53,6 +53,7 @@ winit() {
   int tsel, seldt, selrt, seldb, seldep, selsb;
   int maj, min, usert, actualrt;
   GLXFBConfig *fbcs, bestfbc;
+  UNUSED(i); UNUSED(k); UNUSED(smpls); UNUSED(smplbfrs);
   int visattribs[] = {
     GLX_X_RENDERABLE, 1,
     GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
