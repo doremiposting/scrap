@@ -70,6 +70,7 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
   #elifdef __linux__
   cmd_append(&cmd, "-lGL");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
   cmd_append(&cmd, "-lGLX");
   #endif
   compilefile("src/gfxgl.c", "build/gfxgl.o");

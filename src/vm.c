@@ -64,11 +64,19 @@ vmrun(vm *v) {
         break;
       case OPJMP:
         offset = (int16_t)((B << 8) | C);
+<<<<<<< HEAD
         v->ip += (size_t)offset;
         break;
       case OPJZ:
         offset = (int16_t)((B << 8) | C);
         if (!(v->r[A])) { v->ip += (size_t)offset; }
+=======
+        v->ip += offset;
+        break;
+      case OPJZ:
+        offset = (int16_t)((B << 8) | C);
+        if (!(v->r[A])) { v->ip += offset; }
+>>>>>>> f1c3ef6 (first step of graphics<->windowing rewrite)
         break;
       case OPCALLHOST:
         v->hostcall[A](v);
