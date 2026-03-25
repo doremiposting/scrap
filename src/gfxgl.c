@@ -131,10 +131,9 @@ ginit() {
 
 void
 render() {
-  GETNS(thene); GETNS(thenr);
+  struct timespec frmst, frmend;
   GETNS(frmst); GETNS(frmend);
   if (doprofile) { GETNS(frmst); }
-  thenr = nowr;
 	glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
 	/* glClearColor(0.0f, 0.0f, 0.0f, 1.0f); */
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -160,8 +159,6 @@ render() {
   glRotatef(a, 0.0f, 1.0f, 0.0f);
   drawm(tp);
   glPopMatrix();
-  flipbfrs();
-  /* glFlush(); */
   if (!pausesim) {
     a += 3.0f;
     cx += (dx*(float)mmx);

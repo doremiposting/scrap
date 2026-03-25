@@ -51,29 +51,6 @@ winit() {
 	int tdt, trt, tdb, tdep, tr, tg, tb, ta, tsb, tsamp;
   int tsel, seldt, selrt, seldb, seldep, selsb;
   int maj, min, usert, actualrt;
-<<<<<<< HEAD
-  GLXFBConfig *fbcs, bestfbc;
-  UNUSED(i); UNUSED(k); UNUSED(smpls); UNUSED(smplbfrs);
-  int visattribs[] = {
-    GLX_X_RENDERABLE, 1,
-    GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
-    GLX_RENDER_TYPE, GLX_RGBA_BIT,
-    GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
-    GLX_BLUE_SIZE, 8,
-    GLX_GREEN_SIZE, 8,
-    GLX_RED_SIZE, 8,
-    GLX_ALPHA_SIZE, 8,
-    GLX_DEPTH_SIZE, 24,
-    GLX_DOUBLEBUFFER, True,
-    None
-  };
-  int ctxattribs[] = {
-    GLX_CONTEXT_MAJOR_VERSION_ARB, 2,
-    GLX_CONTEXT_MINOR_VERSION_ARB, 1,
-    None
-  };
-=======
->>>>>>> f1c3ef6 (first step of graphics<->windowing rewrite)
   WWIDTH = 800;
   WHEIGHT = 600;
   display = XOpenDisplay(NULL);
@@ -161,7 +138,9 @@ winloop() {
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
     if (elapsedr > GFXTICKNS) {
+      GETNS(thenr);
       render();
+      flipbfrs();
     }
   }
 }
