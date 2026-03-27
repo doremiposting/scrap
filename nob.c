@@ -59,10 +59,19 @@ main(int argc, char *argv[]) {
   compilefile("src/wx11.c", "build/wx11.o");
   #else
   boilerplate();
+  /* TODO: Go back to using cocoa... someday...
   cmd_append(&cmd, "-framework", "Cocoa");
   cmd_append(&cmd, "-framework", "OpenGL");
   compilefile("src/wcocoa.c", "build/wcocoa.o");
+  */
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-L/opt/X11/lib");
+  cmd_append(&cmd, "-lX11");
+  compilefile("src/wx11.c", "build/wx11.o");
   #endif
+
+  boilerplate();
+  compilefile("src/gfxsw.c", "build/gfxsw.o");
   
   boilerplate();
   #ifdef __APPLE__
@@ -115,11 +124,18 @@ main(int argc, char *argv[]) {
     "build/gfxobj.o", "build/wx11.o", "build/vm.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #else
+  /* TODO: Fix wcocoa & opengl on mac
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-framework", "OpenGL", "-framework", "Cocoa", "-lpthread",
     "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
     "build/gfxobj.o", "build/wcocoa.o");
+  */
+	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
+    "-L/opt/X11/lib", "-lX11", "-lm",
+    "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
+    "build/gfxobj.o", "build/wx11.o", "build/gfxsw.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }

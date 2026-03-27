@@ -6,7 +6,7 @@ extern Display *display;
 extern Window window;
 
 #include <time.h>
-extern struct timespec thene, thenr, nowe, nowr, frmst, frmend;
+extern struct timespec thene, thenr, nowe, nowr;
 
 extern int WWIDTH, WHEIGHT;
 extern long long elapsede, elapsedr;
