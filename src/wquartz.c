@@ -46,10 +46,42 @@ initsb() {
 }
 
 static void
-blitnstretch() {}
+blitnstretch() {
+  int x, y;
+  for (y = 0; y < WHEIGHT; y++) {
+    for (x = 0; x < WWIDTH; x++) {
+      screenbuffer[y * WWIDTH + x] =
+        framebuffer[(y * fbheight / WHEIGHT) * fbwidth
+                    + (x * fbwidth / WWIDTH)];
+    }
+  }
+  XPutImage(display, window, gc, ximg,
+      0, 0, 0, 0, (unsigned int)WWIDTH, (unsigned int) WHEIGHT);
+}
 
 static void
-blitnfit() {}
+blitnfit() {
+  int bx, by, bw, bh, x, y;
+  float scale;
+  uint32_t *row;
+  memset(screenbuffer, 0, (size_t)WWIDTH * WHEIGHT * sizeof(uint32_t));
+  scale = (float)WWIDTH / (float)fbwidth;
+  if (scale * (float)fbheight > (float)WHEIGHT) {
+    scale = (float)WHEIGHT / (float)fbheight;
+  }
+  bw = (int)((float)fbwidth * scale);
+  bh = (int)((float)fbheight * scale);
+  bx = (WWIDTH - bw) / 2;
+  by = (WHEIGHT - bh) / 2;
+  for (y = 0; y < WHEIGHT; y++) {
+    for (x = 0; x < WWIDTH; x++) {
+      row[x] = framebuffer[(y * fbheight / bh) * fbwidth
+                    + (x * fbwidth / bw)];
+    }
+  }
+  XPutImage(display, window, gc, ximg,
+      0, 0, 0, 0, (unsigned int)WWIDTH, (unsigned int) WHEIGHT);
+}
 
 void
 flipbfrs() {
