@@ -91,14 +91,93 @@ flipbfrs() {
 
 void
 winit() {
+  XSetWindowAttributes swa;
+  WWIDTH = 800;
+  WHEIGHT = 600;
+  display = XOpenDisplay(NULL);
+  if (!display) { fprintf(stderr, "Can't open display!\n"); exit(1); }
+  screen = DefaultScreen(display);
+  swa.colormap = DefaultColormap(display, screen);
+  swa.border_pixel = 0;
+  swa.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask | PointerMotionMask;
+  window = XCreateWindow(
+      display, RootWindow(display, screen),
+      0, 0, (unsigned int)WWIDTH, (unsigned int)WHEIGHT,
+      0, DefaultDepth(display, screen), InputOutput,
+      DefaultVisual(display, screen),
+      CWColormap | CWBorderPixel | CWEventMask, &swa
+  );
+  wmdelwindow = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(display, window, &wmdelwin, 1);
+  XStoreName(display, window, "scrap on quartz");
+  XMapWindow(display, window);
+  XSync(display, 0);
+  gc = XCreateGC(display, window, 0, NULL);
+  initsb();
+  ginit();
 }
 
 void
 winloop() {
+  XEvent ev;
+  int quit;
+  quit = 0;
+  GETNS(thene);
+  GETNS(thenr);
+  while (!quit) {
+    while(XPending(display) > 0) {
+      XNextEvent(display, &ev);
+      switch (ev.type) {
+        case ConfigureNotify:
+          WWIDTH = ev.xconfigure.width;
+          WHEIGHT = ev.xconfigure.height;
+          innitsb();
+          resizegfx(WWIDTH, WHEIGHT);
+          break;
+        case KeyPress:
+          switch (XLookupKeysym(&ev.xkey, 0)) {
+            case 'f':
+              doprofile = !doprofile;
+              break;
+            case 'w':
+              wiremesh = !wiremesh;
+              break;
+            case 'p':
+              pausesim = !pausesim;
+              break;
+            case 'q':
+            case XK_Escape:
+              quit = 1;
+              break;
+            default: break;
+          } break;
+        case ClientMessage:
+          if ((Atom)ev.xclient.data.l[0] == wmdelwin) { quit = 1; }
+          break;
+        default:
+          break;
+      }
+    }
+    GETNS(nowe);
+    elapsede = DIFFNS(thene, nowe);
+    if (elapsede > EVTICKNS) { GETNS(thene); }
+    GETNS(nowr);
+    elapsedr = DIFFNS(thenr, nowr);
+    if (elapsed > GFXTICKNS) {
+      GETNS(thenr);
+      render();
+      flipbfrs();
+    }
+  }
 }
 
 void
 wkill() {
   gkill();
   /* TODO: free() roundup from ginit(). */
+  if (ximg) { ximg->data = NULL; XDestroyImage(ximg); }
+  free(screenbuffer);
+  XFreeGC(display, gc);
+  XDestroyWindow(display, window);
+  XCloseDisplay(display);
 }

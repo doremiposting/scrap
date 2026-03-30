@@ -67,7 +67,7 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-I/opt/X11/include");
   cmd_append(&cmd, "-L/opt/X11/lib");
   cmd_append(&cmd, "-lX11");
-  compilefile("src/wx11.c", "build/wx11.o");
+  compilefile("src/wquartz.c", "build/wquartz.o");
   #endif
 
   boilerplate();
@@ -135,7 +135,7 @@ main(int argc, char *argv[]) {
     "-L/opt/X11/lib", "-lX11", "-lm",
     "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
-    "build/gfxobj.o", "build/wx11.o", "build/gfxsw.o");
+    "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }
