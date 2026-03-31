@@ -71,6 +71,15 @@ main(int argc, char *argv[]) {
   #endif
 
   boilerplate();
+  #ifdef __linux__
+  cmd_append(&cmd, "-lX11");
+  cmd_append(&cmd, "-lGLX");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  #elif defined(__APPLE__)
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-L/opt/X11/lib");
+  cmd_append(&cmd, "-lX11");
+  #endif 
   compilefile("src/gfxsw.c", "build/gfxsw.o");
   
   boilerplate();
@@ -89,7 +98,7 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-I/opt/X11/include");
   cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
   cmd_append(&cmd, "-framework", "OpenGL");
-  #else
+  #elif defined(__linux__)
   cmd_append(&cmd, "-lX11");
   cmd_append(&cmd, "-D_GNU_SOURCE");
   cmd_append(&cmd, "-lGL");
@@ -123,7 +132,7 @@ main(int argc, char *argv[]) {
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxalsa.o",
     "build/gfxobj.o", "build/wx11.o", "build/vm.o");
 	if (!cmd_run(&cmd)) { return 1; }
-#else
+#elif defined(__APPLE__)
   /* TODO: Fix wcocoa & opengl on mac
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-framework", "OpenGL", "-framework", "Cocoa", "-lpthread",
@@ -134,8 +143,8 @@ main(int argc, char *argv[]) {
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
     "-L/opt/X11/lib", "-lX11", "-lm",
     "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
-    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
-    "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o");
+    "build/main.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
+    "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o", "build/vm.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }

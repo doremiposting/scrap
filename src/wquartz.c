@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include <time.h>
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include "gfxsw.h"
 
 #include "main.h"
 #include "wquartz.h"
@@ -12,7 +15,6 @@
 int screen;
 XWindowAttributes wa = {0};
 XSetWindowAttributes swa = {0};
-XVisualInfo *vi;
 XImage *i;
 GC gc;
 Atom wmdelwin;
@@ -32,7 +34,7 @@ initsb() {
     ximg->data = NULL;
     XDestroyImage(ximg);
   }
-  if (screenbuffer) { free(screenbuffer); exit(1); }
+  if (screenbuffer) { free(screenbuffer); }
   screenbuffer = calloc((size_t)WWIDTH * WHEIGHT, sizeof(uint32_t));
   if (!screenbuffer) { fprintf(stderr, "screenbuffer alloc failed\n"); exit(1); }
   ximg = XCreateImage(
@@ -107,7 +109,7 @@ winit() {
       DefaultVisual(display, screen),
       CWColormap | CWBorderPixel | CWEventMask, &swa
   );
-  wmdelwindow = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  wmdelwin = XInternAtom(display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(display, window, &wmdelwin, 1);
   XStoreName(display, window, "scrap on quartz");
   XMapWindow(display, window);
@@ -131,7 +133,7 @@ winloop() {
         case ConfigureNotify:
           WWIDTH = ev.xconfigure.width;
           WHEIGHT = ev.xconfigure.height;
-          innitsb();
+          initsb();
           resizegfx(WWIDTH, WHEIGHT);
           break;
         case KeyPress:
@@ -163,7 +165,7 @@ winloop() {
     if (elapsede > EVTICKNS) { GETNS(thene); }
     GETNS(nowr);
     elapsedr = DIFFNS(thenr, nowr);
-    if (elapsed > GFXTICKNS) {
+    if (elapsedr > GFXTICKNS) {
       GETNS(thenr);
       render();
       flipbfrs();

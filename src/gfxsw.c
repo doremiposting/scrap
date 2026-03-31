@@ -9,7 +9,8 @@
 #include "gfxobj.h"
 #include "event.h"
 /* TODO: This will need guarding on a per-platform basis. */
-#include "wx11.h"
+/* #include "wquartz.h" */
+extern long long elapsedr;
 
 int pausesim, wiremesh, doprofile;
 uint32_t *framebuffer;
@@ -38,7 +39,7 @@ resizegfx(int ww, int wh) {
   if (reztbl[best].w == fbwidth && reztbl[best].h == fbheight) { return; }
   fbwidth = reztbl[best].w; fbheight = reztbl[best].h;
   if (framebuffer) { free(framebuffer); }
-  framebuffer = calloc(fbwidth * fbheight, sizeof(uint32_t));
+  framebuffer = calloc((size_t)fbwidth * (size_t)fbheight, sizeof(uint32_t));
   if (!framebuffer) { fprintf(stderr, "failed to alloc framebuffer data!\n"); exit(1); }
   fprintf(stderr, "SW render res: %dx%d (ratio %.3f)\n", fbwidth, fbheight, ratio);
 }
@@ -57,7 +58,7 @@ render() {
   int x, y;
   uint32_t color;
   if (doprofile) { GETNS(frmst); }
-  color = 0xFF69495eD;
+  color = 0xFF6495ED;
   for (y = 0; y < fbheight; y++) {
     for (x = 0; x < fbwidth; x++) {
       framebuffer[y * fbwidth + x] = color;
