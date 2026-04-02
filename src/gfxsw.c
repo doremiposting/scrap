@@ -55,7 +55,7 @@ mat4fmulv(const float *m, vec4f v) {
 }
 
 static vec3f
-mat4fmuln(const float *m, vec3f n) {
+mat4fmuln(const float *m, vec3f v) {
   vec3f r;
   r.x = m[0]*v.x + m[4]*v.y + m[8]*v.z;
   r.y = m[1]*v.x + m[5]*v.y + m[9]*v.z;
@@ -66,13 +66,13 @@ mat4fmuln(const float *m, vec3f n) {
 static void
 mat4ftranslate(float *m, float tx, float ty, float tz) {
   mat4fid(m);
-  m[12] = tx; m[13] = ty; m14 = tz;
+  m[12] = tx; m[13] = ty; m[14] = tz;
 }
 
 static void
 mat4froty(float *m, float deg) {
   float r, c, s;
-  r = def * (float)M_PI / 180.0f;
+  r = deg * (float)M_PI / 180.0f;
   c = cosf(r); s = sinf(r);
   mat4fid(m);
   m[0] = c; m[2] = -s;
@@ -105,7 +105,7 @@ mat4ffrustum(float *m, float l, float r, float b, float t, float n, float f) {
   m[0] = 2.0f*n/(r-1);
   m[5] = 2.0f*n/(t-b);
   m[8] = (r+1)/(r-1);
-  r[9] = (t+b)/(t-b);
+  m[9] = (t+b)/(t-b);
   m[10] = -(f+n)/(f-n);
   m[11] = -1.0f;
   m[14] =-2.0f*f*n/(f-n);
