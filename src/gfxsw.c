@@ -117,14 +117,94 @@ edgefn(float ax, float ay, float bx, float by, float px, float py) {
 }
 
 static uint32_t
-packrgb(float r, float g, float B) {}
+packrgb(float r, float g, float b) {
+  unsigned int ri, gi, bi;
+  ri = (unsigned int)(r < 0.0f ? 0.0f : r > 1.0f ? 255.0f : r*255.0f + 0.5f);
+  gi = (unsigned int)(g < 0.0f ? 0.0f : g > 1.0f ? 255.0f : g*255.0f + 0.5f);
+  bi = (unsigned int)(b < 0.0f ? 0.0f : b > 1.0f ? 255.0f : g*255.0f + 0.5f);
+  return 0xFF000000u | (ri << 16) | (gi << 8) | bi;
+}
 
 static void
 drawtri(
-) {}
+    float sx0, float sy0, float sz0, float li0,
+    float sx1, float sy1, float sz1, float li1,
+    float sx2, float sy2, float sz2, float li2,
+    uint32_t col
+) {
+  int minx, miny, maxx, maxy;
+  float area, cr, cg, cb;
+  int px, py;
+  float pcx, pcy, w0, w1, w2, t0, t1, t2, depth, intense;
+  int idx;
+  minx = (int)fmaxf(0.0f, fminf(sx0, fminf(sx1, sx2)));
+  miny = (int)fmaxf(0.0f, fminf(sy0, fminf(sy1, sy2)));
+  maxx = (int)fminf((float)(fbwidth-1), ceilf(fmaxf(sx0, fmaxf(sx1, sx2))));
+  maxy = (int)fminf((float)(fbheight-1), ceilf(fmaxf(sy0, fmaxf(sy1, sy2))));
+  area = edgefn(sx0, sy0, sx1, sy1, sx2, sy2);
+  cr = (float)((col>>16)&0xFF) / 255.0f;
+  cg = (float)((col>>8)&0xFF) / 255.0f;
+  cb = (float)(col&0xFF) / 255.0f;
+  if (area <= 0.0f) { return; }
+  for (py = miny ; py <= maxy ; py++) {
+    for (px = minx ; px <= maxx ; px++) {
+      pcx = (float)px + 0.5f;
+      pcy = (float)py + 0.5;
+      w0 = edgefn(sx1, sy1, sx2, sy2, pcx, pcy);
+      w1 = edgefn(sx2, sy2, sx0, sy0, pcx, pcy);
+      w2 = edgefn(sx0, sy0, sx1, sy1, pcx, pcy);
+      if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) {
+        t0 = w0/area; t1 = w1/area; t2 = w2/area;
+        depth = t0 * sz0 + t1 * sz1 + t2 * sz2;
+        intense = t0 * li0 + t1 * li1 + t2 * li2;
+        idx = py*fbwidth + px;
+        if (depth < zbuf[idx]) {
+          zbuf[idx] = depth;
+          framebuffer[idx] = packrgb(cr*intense, cg*intense, cb*intense);
+        }
+      }
+    }
+  }
+}
 
 static void
-drawm(const Mesh *mesh, float *mv) {}
+drawm(const Mesh *mesh, float *mv) {
+  unsigned int i;
+  float mvp[16];
+  float hw, hh, lx, ly, lz;
+  uint32_t col;
+  vec4f cp0, cp1, cp2;
+  float nx0, ny0, nz0, nx1, ny1, nz1, nx2, ny2, nz2;
+  float sx0, sy0, sx1, sy1, sx2, sy2;
+  float dz0, dz1, dz2;
+  vec3f vn0, vn1, vn2;
+  float li0, li1, li2;
+  hw = (float)fbwidth * 0.5f;
+  hh = (float)fbheight * 0.5f;
+  lx = 0.577f; ly = 0.577f; lz = 0.577f;
+  col = 0xFFE07010u;
+  mat4fmul(mvp, proj, mv);
+  for (i = 0; i+2 < mesh->cnt; i+= 3) {
+    cp0 = mat4fmulv(mvp, (vec4f){mesh->v[i].x, mesh->v[i].y, mesh->v[i].z, 1.0f});
+    cp1 = mat4fmulv(mvp, (vec4f){mesh->v[i+1].x, mesh->v[i+1].y, mesh->v[i+1].z, 1.0f});
+    cp2 = mat4fmulv(mvp, (vec4f){mesh->v[i+2].x, mesh->v[i+2].y, mesh->v[i+2].z, 1.0f});
+    if (cp0.t <= 0.0f || cp1.t <= 0.0f || cp2.t <= 0.0f) { continue; }
+    nx0 = cp0.x / cp0.t; ny0 = cp0.y / cp0.t; nz0 = cp0.z / cp0.t;
+    nx1 = cp1.x / cp1.t; ny1 = cp1.y / cp1.t; nz1 = cp1.z / cp1.t;
+    nx2 = cp2.x / cp2.t; ny2 = cp2.y / cp2.t; nz2 = cp2.z / cp2.t;
+    sx0 = hw*(nx0+1.0f); sy0 = hh*(1.0f-ny0);
+    sx1 = hw*(nx1+1.0f); sy1 = hh*(1.0f-ny1);
+    sx2 = hw*(nx2+1.0f); sy2 = hh*(1.0f-ny2);
+    dz0 = (nz0 + 1.0f)*0.5f; dz1 = (nz1 + 1.0f)*0.5f; dz2 = (nz2 + 1.0f)*0.5f;
+    vn0 = mat4fmuln(mv, (vec3f){mesh->v[i].nx, mesh->v[i].ny, mesh->v[i].nz});
+    vn0 = mat4fmuln(mv, (vec3f){mesh->v[i+1].nx, mesh->v[i+1].ny, mesh->v[i+2].nz});
+    vn0 = mat4fmuln(mv, (vec3f){mesh->v[i+2].nx, mesh->v[i+2].ny, mesh->v[i+2].nz});
+    li0 = fmaxf(0.0f, vn0.x * lx + vn0.y * ly + vn0.z * lz) * 0.8f + 0.2f;
+    li1 = fmaxf(0.0f, vn1.x * lx + vn1.y * ly + vn1.z * lz) * 0.8f + 0.2f;
+    li2 = fmaxf(0.0f, vn2.x * lx + vn2.y * ly + vn2.z * lz) * 0.8f + 0.2f;
+    drawtri(sx0, sy0, dz0, li0, sx2, sy2, dz2, li2, sx1, sy1, dz1, li1, col);
+  }
+}
 
 static const struct { float ratio; int w, h; } reztbl[] = {
   { 4.0f / 3.0f, 640, 480 },
