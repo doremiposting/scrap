@@ -16,7 +16,7 @@ int pausesim, wiremesh, doprofile;
 uint32_t *framebuffer;
 int fbwidth, fbheight;
 
-static float rot, cx, cy, dx, rad;
+static float a, cx, cy, dx, rad;
 static int mmx, mmy;
 static Mesh *tp;
 static float *zbuf;
@@ -92,7 +92,7 @@ mat4flookat(float *m, vec3f eye, vec3f ctr, vec3f up) {
   u.x = s.y*f.z - s.z*f.y; u.y = s.z*f.x - s.x*f.z; u.z = s.x*f.y - s.y*f.x;
   m[0] = s.x; m[1] = u.x; m[2] = -f.x;
   m[4] = s.y; m[5] = u.y; m[6] = -f.y;
-  m[8] = s.z; m[9] = u.z; m[10] -f.z;
+  m[8] = s.z; m[9] = u.z; m[10] = -f.z;
   m[12] = -(s.x*eye.x + s.y*eye.y + s.z*eye.z);
   m[13] = -(u.x*eye.x + u.y*eye.y + u.z*eye.z);
   m[14] = (f.x*eye.x + f.y*eye.y + f.z*eye.z);
@@ -102,9 +102,9 @@ mat4flookat(float *m, vec3f eye, vec3f ctr, vec3f up) {
 static void
 mat4ffrustum(float *m, float l, float r, float b, float t, float n, float f) {
   memset(m, 0, 16 * sizeof(float));
-  m[0] = 2.0f*n/(r-1);
+  m[0] = 2.0f*n/(r-l);
   m[5] = 2.0f*n/(t-b);
-  m[8] = (r+1)/(r-1);
+  m[8] = (r+l)/(r-l);
   m[9] = (t+b)/(t-b);
   m[10] = -(f+n)/(f-n);
   m[11] = -1.0f;
@@ -121,7 +121,7 @@ packrgb(float r, float g, float b) {
   unsigned int ri, gi, bi;
   ri = (unsigned int)(r < 0.0f ? 0.0f : r > 1.0f ? 255.0f : r*255.0f + 0.5f);
   gi = (unsigned int)(g < 0.0f ? 0.0f : g > 1.0f ? 255.0f : g*255.0f + 0.5f);
-  bi = (unsigned int)(b < 0.0f ? 0.0f : b > 1.0f ? 255.0f : g*255.0f + 0.5f);
+  bi = (unsigned int)(b < 0.0f ? 0.0f : b > 1.0f ? 255.0f : b*255.0f + 0.5f);
   return 0xFF000000u | (ri << 16) | (gi << 8) | bi;
 }
 
@@ -197,8 +197,8 @@ drawm(const Mesh *mesh, float *mv) {
     sx2 = hw*(nx2+1.0f); sy2 = hh*(1.0f-ny2);
     dz0 = (nz0 + 1.0f)*0.5f; dz1 = (nz1 + 1.0f)*0.5f; dz2 = (nz2 + 1.0f)*0.5f;
     vn0 = mat4fmuln(mv, (vec3f){mesh->v[i].nx, mesh->v[i].ny, mesh->v[i].nz});
-    vn0 = mat4fmuln(mv, (vec3f){mesh->v[i+1].nx, mesh->v[i+1].ny, mesh->v[i+2].nz});
-    vn0 = mat4fmuln(mv, (vec3f){mesh->v[i+2].nx, mesh->v[i+2].ny, mesh->v[i+2].nz});
+    vn1 = mat4fmuln(mv, (vec3f){mesh->v[i+1].nx, mesh->v[i+1].ny, mesh->v[i+1].nz});
+    vn2 = mat4fmuln(mv, (vec3f){mesh->v[i+2].nx, mesh->v[i+2].ny, mesh->v[i+2].nz});
     li0 = fmaxf(0.0f, vn0.x * lx + vn0.y * ly + vn0.z * lz) * 0.8f + 0.2f;
     li1 = fmaxf(0.0f, vn1.x * lx + vn1.y * ly + vn1.z * lz) * 0.8f + 0.2f;
     li2 = fmaxf(0.0f, vn2.x * lx + vn2.y * ly + vn2.z * lz) * 0.8f + 0.2f;
@@ -218,7 +218,7 @@ static const struct { float ratio; int w, h; } reztbl[] = {
 void
 resizegfx(int ww, int wh) {
   int i, best;
-  float ratio, diff, bestdiff;
+  float ratio, diff, bestdiff, fovyrad, top, right;
   ratio = (wh > 0) ? (float)ww / (float)wh : 4.0f/3.0f;
   best = 0;
   bestdiff = fabsf(ratio - reztbl[0].ratio);
@@ -229,8 +229,15 @@ resizegfx(int ww, int wh) {
   if (reztbl[best].w == fbwidth && reztbl[best].h == fbheight) { return; }
   fbwidth = reztbl[best].w; fbheight = reztbl[best].h;
   if (framebuffer) { free(framebuffer); }
+  if (zbuf) { free(zbuf); }
   framebuffer = calloc((size_t)fbwidth * (size_t)fbheight, sizeof(uint32_t));
+  zbuf = calloc((size_t)fbwidth * (size_t)fbheight, sizeof(float));
   if (!framebuffer) { fprintf(stderr, "failed to alloc framebuffer data!\n"); exit(1); }
+  if (!zbuf) { fprintf(stderr, "failed to alloc zbuffer data!\n"); exit(1); }
+  fovyrad = (float)(60.0 * (M_PI / 180.0));
+  top = tanf((float)fovyrad * 0.5f) * 0.1f;
+  right = top * ((float)fbwidth / (float)fbheight);
+  mat4ffrustum(proj, -right, right, -top, top, 0.1f, 1000.0f);
   fprintf(stderr, "SW render res: %dx%d (ratio %.3f)\n", fbwidth, fbheight, ratio);
 }
 
@@ -239,20 +246,39 @@ ginit() {
   pausesim = 0; wiremesh = 0; doprofile = 1;
   framebuffer = NULL;
   fbheight = 0; fbwidth = 0;
+  a = 0.0f; cx = 0.0f; cy = 0.0f;
+  dx = 0.05f; rad = 0.75f;
+  mmx = 1; mmy = 1;
+  tp = loadobj("assets/teapot.obj");
   resizegfx(800, 600);
 }
 
 void
 render() {
   struct timespec frmst, frmend;
-  int x, y;
-  uint32_t color;
+  float mv[16], t[16], tmp[16], r[16], view[16];
+  int k, n;
   if (doprofile) { GETNS(frmst); }
-  color = 0xFF6495ED;
-  for (y = 0; y < fbheight; y++) {
-    for (x = 0; x < fbwidth; x++) {
-      framebuffer[y * fbwidth + x] = color;
-    }
+  n = fbwidth * fbheight;
+  for (k = 0; k < n ; k++) {
+    framebuffer[k] = 0xFF6495EDu;
+    zbuf[k] = 1.0f;
+  }
+  mat4flookat(view, (vec3f){3.0f, 3.0f, 3.0f}, (vec3f){0.0f, 0.0f, -4.5f},
+      (vec3f){0.0f, 1.0f, 0.0f});
+  mat4ftranslate(t, cx, cy, -5.0f);
+  mat4froty(r, a);
+  mat4fmul(tmp, t, r);
+  mat4fmul(mv, view, tmp);
+  drawm(tp, mv);
+  if (!pausesim) {
+    a += 3.0f;
+    cx += dx * (float)mmx;
+    if (cx > 3.8-rad) { cx = 3.8f - rad; mmx *= -1; }
+    if (cx < -3.8-rad) {cx = -3.8f - rad; mmx *= -1; }
+    cy += dx * (float)mmy;
+    if (cy > 2.8f-rad) { cy = 2.8f - rad; mmy *= -1; }
+    if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; }
   }
   if (doprofile) {
     GETNS(frmend);
@@ -266,6 +292,7 @@ render() {
 void
 gkill() {
   fprintf(stderr, "\rDone.                    \n");
-  free(framebuffer);
-  framebuffer = NULL;
+  killmesh(tp);
+  free(framebuffer); framebuffer = NULL;
+  free(zbuf); zbuf = NULL;
 }
