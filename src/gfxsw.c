@@ -127,15 +127,15 @@ packrgb(float r, float g, float b) {
 
 static void
 drawtri(
-    float sx0, float sy0, float sz0, float li0,
-    float sx1, float sy1, float sz1, float li1,
-    float sx2, float sy2, float sz2, float li2,
+    float sx0, float sy0, float rw0, float li0,
+    float sx1, float sy1, float rw1, float li1,
+    float sx2, float sy2, float rw2, float li2,
     uint32_t col
 ) {
   int minx, miny, maxx, maxy;
   float area, cr, cg, cb;
   int px, py;
-  float pcx, pcy, w0, w1, w2, t0, t1, t2, depth, intense;
+  float pcx, pcy, w0, w1, w2, t0, t1, t2, rw, intense;
   int idx;
   minx = (int)fmaxf(0.0f, fminf(sx0, fminf(sx1, sx2)));
   miny = (int)fmaxf(0.0f, fminf(sy0, fminf(sy1, sy2)));
@@ -155,11 +155,13 @@ drawtri(
       w2 = edgefn(sx0, sy0, sx1, sy1, pcx, pcy);
       if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) {
         t0 = w0/area; t1 = w1/area; t2 = w2/area;
-        depth = t0 * sz0 + t1 * sz1 + t2 * sz2;
-        intense = t0 * li0 + t1 * li1 + t2 * li2;
+        rw = t0 * rw0 + t1 * rw1 + t2 * rw2;
+        intense = (t0 * li0 * rw0 +
+            t1 * li1 * rw1 +
+            t2 * li2 * rw2) / rw;
         idx = py*fbwidth + px;
-        if (depth < zbuf[idx]) {
-          zbuf[idx] = depth;
+        if (rw > zbuf[idx]) {
+          zbuf[idx] = rw;
           framebuffer[idx] = packrgb(cr*intense, cg*intense, cb*intense);
         }
       }
@@ -176,7 +178,7 @@ drawm(const Mesh *mesh, float *mv) {
   vec4f cp0, cp1, cp2;
   float nx0, ny0, nz0, nx1, ny1, nz1, nx2, ny2, nz2;
   float sx0, sy0, sx1, sy1, sx2, sy2;
-  float dz0, dz1, dz2;
+  float rw0, rw1, rw2;
   vec3f vn0, vn1, vn2;
   float li0, li1, li2;
   hw = (float)fbwidth * 0.5f;
@@ -195,14 +197,14 @@ drawm(const Mesh *mesh, float *mv) {
     sx0 = hw*(nx0+1.0f); sy0 = hh*(1.0f-ny0);
     sx1 = hw*(nx1+1.0f); sy1 = hh*(1.0f-ny1);
     sx2 = hw*(nx2+1.0f); sy2 = hh*(1.0f-ny2);
-    dz0 = (nz0 + 1.0f)*0.5f; dz1 = (nz1 + 1.0f)*0.5f; dz2 = (nz2 + 1.0f)*0.5f;
+    rw0 = 1.0f / cp0.t; rw1 = 1.0f/ cp1.t; rw2 = 1.0f / cp2.t;
     vn0 = mat4fmuln(mv, (vec3f){mesh->v[i].nx, mesh->v[i].ny, mesh->v[i].nz});
     vn1 = mat4fmuln(mv, (vec3f){mesh->v[i+1].nx, mesh->v[i+1].ny, mesh->v[i+1].nz});
     vn2 = mat4fmuln(mv, (vec3f){mesh->v[i+2].nx, mesh->v[i+2].ny, mesh->v[i+2].nz});
     li0 = fmaxf(0.0f, vn0.x * lx + vn0.y * ly + vn0.z * lz) * 0.8f + 0.2f;
     li1 = fmaxf(0.0f, vn1.x * lx + vn1.y * ly + vn1.z * lz) * 0.8f + 0.2f;
     li2 = fmaxf(0.0f, vn2.x * lx + vn2.y * ly + vn2.z * lz) * 0.8f + 0.2f;
-    drawtri(sx0, sy0, dz0, li0, sx2, sy2, dz2, li2, sx1, sy1, dz1, li1, col);
+    drawtri(sx0, sy0, rw0, li0, sx2, sy2, rw2, li2, sx1, sy1, rw1, li1, col);
   }
 }
 
@@ -262,7 +264,7 @@ render() {
   n = fbwidth * fbheight;
   for (k = 0; k < n ; k++) {
     framebuffer[k] = 0xFF6495EDu;
-    zbuf[k] = 1.0f;
+    zbuf[k] = 0.0f;
   }
   mat4flookat(view, (vec3f){3.0f, 3.0f, 3.0f}, (vec3f){0.0f, 0.0f, -4.5f},
       (vec3f){0.0f, 1.0f, 0.0f});
