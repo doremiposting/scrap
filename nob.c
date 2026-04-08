@@ -120,7 +120,7 @@ main(int argc, char *argv[]) {
   boilerplate();
   cmd_append(&cmd, "-framework", "AudioToolbox", "-framework", "AudioUnit",
       "-framework", "CoreAudio");
-  compilefile("src/sfxcore.c", "build/sfxcore.o");
+  compilefile("src/sfxca.c", "build/sfxca.o");
 #endif
 
   boilerplate();
@@ -143,8 +143,9 @@ main(int argc, char *argv[]) {
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
     "-L/opt/X11/lib", "-lX11", "-lm",
     "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
-    "build/main.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxcore.o",
-    "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o", "build/vm.o");
+    "build/main.o", "build/game.o", "build/gfx.o", "build/event.o",
+    "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o", "build/vm.o",
+    "build/sfxca.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }
