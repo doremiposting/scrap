@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <time.h>
 
+#include "sfx.h"
 #include "sfxalsa.h"
 #include "main.h"
 

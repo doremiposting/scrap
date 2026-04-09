@@ -120,6 +120,8 @@ main(int argc, char *argv[]) {
   boilerplate();
   cmd_append(&cmd, "-framework", "AudioToolbox", "-framework", "AudioUnit",
       "-framework", "CoreAudio");
+  cmd_append(&cmd, "-lpthread");
+  cmd_append(&cmd, "-I/opt/homebrew/include/");
   compilefile("src/sfxca.c", "build/sfxca.o");
 #endif
 
@@ -141,7 +143,8 @@ main(int argc, char *argv[]) {
     "build/gfxobj.o", "build/wcocoa.o");
   */
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap-cocoa",
-    "-L/opt/X11/lib", "-lX11", "-lm",
+    "-L/opt/X11/lib", "-lX11", "-lm", "-lpthread", "-L/opt/homebrew/lib",
+    "-lmpg123",
     "-framework", "AudioToolbox", "-framework", "AudioUnit", "-framework", "CoreAudio",
     "build/main.o", "build/game.o", "build/gfx.o", "build/event.o",
     "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o", "build/vm.o",

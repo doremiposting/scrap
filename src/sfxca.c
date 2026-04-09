@@ -1,8 +1,27 @@
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
+#include <mpg123.h>
 #include <AudioUnit/AudioUnit.h>
 
+#include "sfx.h"
+#include "sfxca.h"
+#include "main.h"
+
+#define MAXVCS 32
+#define CHANNELS 2
+
 static AudioUnit outputunit;
+static Soundfx *s[SFX_COUNT];
+static Triggersfx triggers[SFX_COUNT];
+static Voice voices[MAXVCS];
+static unsigned int voicecnt;
+static pthread_mutex_t sfxmutex;
+
+static Soundfx *
+loadsnd(const char *path) {
+  return NULL;
+}
 
 static void
 mixaudio(void *buf, unsigned int nframes) {
@@ -47,6 +66,10 @@ sfxinit() {
       &cb, sizeof(cb));
   AudioUnitInitialize(outputunit);
   AudioOutputUnitStart(outputunit);
+}
+
+void
+triggersfx(SfxID id, int cut) {
 }
 
 void
