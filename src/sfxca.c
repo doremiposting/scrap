@@ -20,7 +20,34 @@ static pthread_mutex_t sfxmutex;
 
 static Soundfx *
 loadsnd(const char *path) {
-  return NULL;
+  mpg123_handle *mh;
+  Soundfx *ss;
+  unsigned char *a, b[8192];
+  size_t cap, done;
+  long rate;
+  int err, chnls, enc, r;
+  mh = mpg123_new(NULL, &err);
+  a = NULL;
+  cap = 0;
+  ss = calloc(1, sizeof(Soundfx));
+  mpg123_open(mh, path);
+  mpg123_getformat(mh, &rate, &chnls, &enc);
+  mpg123_format_none(mh);
+  mpg123_format(mh, rate, chnls, MPG123_ENC_SIGNED_16);
+  ss->rate = (int)rate;
+  ss->chnls = chnls;
+  while ((r = mpg123_read(mh, b, sizeof(b), &done)) != MPG123_DONE) {
+    if (r == MPG123_OK && done > 0) {
+      a = realloc(a, cap+done);
+      memcpy(a+cap, b, done);
+      cap += done;
+    }
+  }
+  ss->pcm = (short *)a;
+  ss->frames = cap / ((size_t)chnls * sizeof(short));
+  mpg123_close(mh);
+  mpg123_delete(mh);
+  return ss;
 }
 
 static void

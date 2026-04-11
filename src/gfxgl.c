@@ -19,10 +19,11 @@
 #include "wcocoa.h"
 #endif
 #include "gfxobj.h"
+#include "sfx.h"
 #ifdef __linux__
 #include "sfxalsa.h"
 #elifdef __APPLE__
-#include "sfxcore.h"
+#include "sfxca.h"
 #endif
 #include "event.h"
 
