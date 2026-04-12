@@ -52,7 +52,64 @@ loadsnd(const char *path) {
 
 static void
 mixaudio(void *buf, unsigned int nframes) {
-  memset(buf, 0, nframes *sizeof(int16_t) * 2);
+  short *out;
+  unsigned int v, f;
+  int ch, mixed;
+  long mixable, remaining;
+  size_t mixi, srci;
+  Voice *voice;
+  Soundfx *sfx;
+  unsigned int i;
+  out = (short *)buf;
+  memset(buf, 0, nframes * CHANNELS * sizeof(int16_t));
+  pthread_mutex_lock(&sfxmutex);
+  for (i = 0; i < SFX_COUNT; i++) {
+    if (!triggers[i].on) { continue; }
+    sfx = s[i];
+    voice = NULL;
+    for (v = 0; v < MAXVCS; v++) {
+      if (voices[v].id == (SfxID)i && voices[v].active) {
+        voice = &voices[v];
+        break;
+      }
+    }
+    if (voice && triggers[i].cut) { voice->position = 0; }
+    if (!voice) {
+      for (v = 0; v < MAXVCS; v++) {
+        if (!voices[v].active) {
+          voice = &voices[v];
+          voice->id = (SfxID)i;
+          voice->active = 1;
+          voice->position = 0;
+          if (v >= voicecnt) { voicecnt = v+1; }
+          break;
+        }
+      }
+    }
+    triggers[i].on = 0;
+  }
+  pthread_mutex_unlock(&sfxmutex);
+  for (v = 0; v < voicecnt; v++) {
+    voice = &voices[v];
+    if (!voice->active) { continue; }
+    sfx = s[voice->id];
+    if (!sfx || !sfx->pcm) { voice->active = 0; continue; }
+    mixable = (long)nframes;
+    remaining = (long)(sfx->frames - voice->position);
+    if (mixable > remaining) { mixable = remaining; }
+    for (f = 0; (long)f < mixable; f++) {
+      for (ch = 0; ch < CHANNELS; ch++) {
+        mixi = (size_t)f * CHANNELS + (size_t)ch;
+        srci = (voice->position + f) * CHANNELS + (size_t)ch;
+        mixed = out[mixi] + sfx->pcm[srci];
+        if (mixed > 32767) { mixed = 32767; }
+        if (mixed < -32768) { mixed = -32768; }
+        out[mixi] = (short)mixed;
+      }
+    }
+    voice->position += (size_t)mixable;
+    if (voice->position >= sfx->frames) { voice->active = 0; }
+  }
 }
 
 static OSStatus
