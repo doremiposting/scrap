@@ -154,6 +154,9 @@ sfxinit() {
 
 void
 triggersfx(SfxID id, int cut) {
+  pthread_mutex_lock(&sfxmutex);
+  if (!triggers[id].on) { triggers[id].on = 1; triggers[id].cut = cut; }
+  pthread_mutex_unlock(&sfxmutex);
 }
 
 void
