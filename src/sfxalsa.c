@@ -29,20 +29,24 @@ static pthread_t sfxthread;
 static volatile int sfxrunning;
 static pthread_mutex_t sfxmutex;
 
-int playsfx(long long elapsed);
+//int playsfx(long long elapsed);
+int playsfx();
 
 static void *
 sfxloop(void *arg) {
+  /*
   struct timespec tt, tn;
   long long elapsed;
   clock_gettime(CLOCK_MONOTONIC, &tt);
-
+  */
   while (sfxrunning) {
+    /*
     clock_gettime(CLOCK_MONOTONIC, &tn);
     elapsed = (tn.tv_sec - tt.tv_sec) * 1000000000LL + (tn.tv_nsec - tt.tv_nsec);
     tt = tn;
-
-    playsfx(elapsed);
+    */
+    //playsfx(elapsed);
+    playsfx();
     usleep(1000);
   }
   UNUSED(arg);
@@ -99,9 +103,9 @@ initsfx() {
 
   ao = calloc(1, sizeof(Aout));
   if (!ao) { return -1; }
-  //rc = snd_pcm_open(&ao->pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
+  rc = snd_pcm_open(&ao->pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
   //rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, 0);
-  rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+  //rc = snd_pcm_open(&ao->pcm, "pulse", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
   //rc = snd_pcm_open(&ao->pcm, "dmix", SND_PCM_STREAM_PLAYBACK, 0);
   if (rc < 0) { return rc; }
   snd_pcm_hw_params_malloc(&hw);
@@ -133,13 +137,14 @@ triggersfx(SfxID id, int cut) {
 }
 
 int
-playsfx(long long elapsed) {
+//playsfx(long long elapsed) {
+playsfx() {
   snd_pcm_sframes_t frames, mixableframes, remainingframes, avail;
   snd_pcm_state_t state;
   size_t f, mixi, srci;
   unsigned int i, v;
   int ch, activevc, mixed;
-  long mixtime;
+  //long mixtime;
   Voice *voice;
   Soundfx *sfx;
   activevc = 0;
@@ -153,9 +158,12 @@ playsfx(long long elapsed) {
     snd_pcm_prepare(ao->pcm);
   }
 
+  /*
   mixtime = ((rate * elapsed)/1000000000LL);
   if (mixtime > MIXFRAMES) { mixtime = MIXFRAMES; }
   if (mixtime == 0) { return 0; }
+  */
+  //mixtime = MIXFRAMES;
 
   avail = snd_pcm_avail_update(ao->pcm);
   if (avail < 0) {
@@ -198,7 +206,8 @@ playsfx(long long elapsed) {
   pthread_mutex_unlock(&sfxmutex);
   
 
-  memset(mixbuffer, 0, (size_t)(mixtime * chnls) * sizeof(short));
+  //memset(mixbuffer, 0, (size_t)(mixtime * chnls) * sizeof(short));
+  memset(mixbuffer, 0, (size_t)(MIXFRAMES * chnls) * sizeof(short));
 
   for (v = 0; v < MAXVCS; v++) {
     voice = &voices[v];
@@ -207,7 +216,8 @@ playsfx(long long elapsed) {
     sfx = s[voice->id];
     if (!sfx || !sfx->pcm) { voice->active = 0; continue; }
 
-    mixableframes = mixtime;
+    //mixableframes = mixtime;
+    mixableframes = MIXFRAMES;
     remainingframes = (snd_pcm_sframes_t)(sfx->frames - voice->position);
     if (mixableframes > remainingframes) { mixableframes = remainingframes; }
 
@@ -230,10 +240,12 @@ playsfx(long long elapsed) {
     if (voice->position >= sfx->frames) { voice->active = 0; }
   }
 
-  frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
+  //frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
+  frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)MIXFRAMES);
   if (frames == -EPIPE) { /* Buffer underrun state */
     snd_pcm_prepare(ao->pcm);
-    frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
+    //frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)mixtime);
+    frames = snd_pcm_writei(ao->pcm, mixbuffer, (unsigned long)MIXFRAMES);
   }
   else {
   /* if (activevc > 0) { */
@@ -244,18 +256,32 @@ playsfx(long long elapsed) {
 
 void
 killsfx() {
-  sfxrunning = 0;
-  pthread_join(sfxthread, NULL);
+  if (sfxrunning) {
+    if (ao && ao->pcm) { snd_pcm_drop(ao->pcm); }
+    sfxrunning = 0;
+    pthread_join(sfxthread, NULL);
+  }
 
-  snd_pcm_drain(ao->pcm);
-  snd_pcm_close(ao->pcm);
+  if (ao) {
+    if (ao->pcm) {
+      snd_pcm_drain(ao->pcm);
+      snd_pcm_close(ao->pcm);
+    }
+    free(ao);
+    ao = NULL;
+  }
 
   mpg123_close(mh);
   mpg123_delete(mh);
   mpg123_exit();
 
-  free(s[SFX_BOOM]->pcm);
+  if (s[SFX_BOOM]) {
+    /* TODO: This will need to be generalized later when we add more sfx. */
+    free(s[SFX_BOOM]->pcm);
+    free(s[SFX_BOOM]);
+    s[SFX_BOOM] = NULL;
+  }
+
   free (voices);
   free(buffer);
-  free(ao);
 }
