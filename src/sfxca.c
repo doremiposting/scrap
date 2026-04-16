@@ -116,6 +116,8 @@ static OSStatus
 rendercb(void *ref, AudioUnitRenderActionFlags *flags,
     const AudioTimeStamp *ts, UInt32 bus, UInt32 nframes,
     AudioBufferList *bufs) {
+  UNUSED(ref); UNUSED(flags); UNUSED(ts);
+  UNUSED(bus);
   mixaudio(bufs->mBuffers[0].mData, nframes);
   return noErr;
 }
