@@ -149,7 +149,7 @@ drawtri(
   for (py = miny ; py <= maxy ; py++) {
     for (px = minx ; px <= maxx ; px++) {
       pcx = (float)px + 0.5f;
-      pcy = (float)py + 0.5;
+      pcy = (float)py + 0.5f;
       w0 = edgefn(sx1, sy1, sx2, sy2, pcx, pcy);
       w1 = edgefn(sx2, sy2, sx0, sy0, pcx, pcy);
       w2 = edgefn(sx0, sy0, sx1, sy1, pcx, pcy);

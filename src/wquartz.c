@@ -35,7 +35,7 @@ initsb() {
     XDestroyImage(ximg);
   }
   if (screenbuffer) { free(screenbuffer); }
-  screenbuffer = calloc((size_t)WWIDTH * WHEIGHT, sizeof(uint32_t));
+  screenbuffer = calloc((size_t)WWIDTH * (size_t)WHEIGHT, sizeof(uint32_t));
   if (!screenbuffer) { fprintf(stderr, "screenbuffer alloc failed\n"); exit(1); }
   ximg = XCreateImage(
       display, DefaultVisual(display, screen),
@@ -66,7 +66,8 @@ blitnfit() {
   int bx, by, bw, bh, x, y;
   float scale;
   uint32_t *row;
-  memset(screenbuffer, 0, (size_t)WWIDTH * WHEIGHT * sizeof(uint32_t));
+  row = NULL;
+  memset(screenbuffer, 0, (size_t)WWIDTH * (size_t)WHEIGHT * sizeof(uint32_t));
   scale = (float)WWIDTH / (float)fbwidth;
   if (scale * (float)fbheight > (float)WHEIGHT) {
     scale = (float)WHEIGHT / (float)fbheight;
