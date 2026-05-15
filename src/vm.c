@@ -60,16 +60,20 @@ vmrun(vm *v) {
         v->r[A] = v->r[B] * v->r[C];
         break;
       case OPDIV:
+        if (v->r[C] == 0) {
+          fprintf(stderr, "VM: Encountered division by zero. Halting.\n");
+          v->running = 0;
+          break;
+        }
         v->r[A] = v->r[B] / v->r[C];
         break;
       case OPJMP:
         offset = (int16_t)((B << 8) | C);
-        v->ip += (size_t)offset;
+        v->ip = (size_t)((int)v->ip + offset);
         break;
       case OPJZ:
         offset = (int16_t)((B << 8) | C);
         if (!(v->r[A])) { v->ip += (size_t)offset; }
-        v->ip += offset;
         break;
       case OPCALLHOST:
         v->hostcall[A](v);
