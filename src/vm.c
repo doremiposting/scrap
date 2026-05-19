@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "memmap.h"
+
 #define VMREGCNT 16
 typedef int32_t vmreg;
 #define VMCODEMAX 65536
@@ -154,6 +156,7 @@ vmrun(vm *v) {
 
 void
 vmtest() {
+  int32_t ncmds, i, base, type, a0, a1, a2, a3;
   const uint8_t prog[] = {
     OPLOADI, 1, 0, 5,
     OPLOADI, 2, 0, 1,
@@ -169,7 +172,25 @@ vmtest() {
   v.code = prog;
   v.ip = 0;
   v.hostcall[0] = hostprint;
+
+  writei32(&v, VM_ADDR_VERSION, VM_MEMMAP_VERSION);
   vmrun(&v);
+  ncmds = readi32(&v, VM_ADDR_CMD_COUNT);
+  if (ncmds > VM_CMD_MAX) { ncmds = VM_CMD_MAX; }
+  for (i = 0; i < ncmds; i++) {
+    base = VM_ADDR_CMD_BUF + i * VM_CMD_STRIDE;
+    type = readi32(&v, base);
+    a0 = readi32(&v, base+4);
+    a1 = readi32(&v, base+8);
+    a2 = readi32(&v, base+12);
+    a3 = readi32(&v, base+16);
+    /* switch (type) { */
+    /* case VM_CMD_DRAW_SPRITE: break; */
+    /* case VM_CMD_PLAY_SOUND: break; */
+    /* default: break; */
+    /* } */
+  }
+  writei32(&v, VM_ADDR_CMD_COUNT, 0); 
 }
 
 int

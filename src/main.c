@@ -6,7 +6,7 @@
 #include "wx11.h"
 #include "gfxgl.h"
 #include "sfxpa.h"
-#endif /* */
+#endif /* __APPLE__ */
 
 #include "vm.h"
 
