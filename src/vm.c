@@ -25,14 +25,37 @@ typedef enum {
   OPJMP,
   OPJZ,
   OPCALLHOST,
+  OPLOAD8,
+  OPSTORE8,
+  OPLOAD32,
+  OPSTORE32
 } opcode;
 
 int hostprint(vm *v);
 
 void
+writei32(vm *v, uint16_t addr, int32_t val) {
+  v->mem[addr] = (uint8_t)(val & 0xFF);
+  v->mem[addr+1] = (uint8_t)((val >> 8) & 0xFF);
+  v->mem[addr+2] = (uint8_t)((val >> 16) & 0xFF);
+  v->mem[addr+3] = (uint8_t)((val >> 24) & 0xFF);
+}
+
+int32_t
+readi32(const vm *v, uint16_t addr) {
+  return (int32_t)(
+      (uint32_t)v->mem[addr] |
+      (uint32_t)v->mem[addr+1] << 8 |
+      (uint32_t)v->mem[addr+2] << 16 |
+      (uint32_t)v->mem[addr+3] << 24 
+      );
+}
+
+void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
   int16_t imm, offset;
+  uint32_t addr;
   v->running = 1;
   while (v->running) {
     op = v->code[v->ip++];
@@ -73,10 +96,54 @@ vmrun(vm *v) {
         break;
       case OPJZ:
         offset = (int16_t)((B << 8) | C);
-        if (!(v->r[A])) { v->ip += (size_t)offset; }
+        if (!(v->r[A])) { v->ip = (size_t)(v->ip + offset); }
         break;
       case OPCALLHOST:
         v->hostcall[A](v);
+        break;
+      case OPLOAD8:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Load8 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->r[A] = (vmreg)v->mem[addr];
+        break;
+      case OPSTORE8:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Store8 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->mem[addr] = (uint8_t)(v->r[A] & 0xFF);
+        break;
+      case OPLOAD32:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Load32 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->r[A] = (vmreg)(
+            (uint32_t)v->mem[addr] |
+            (uint32_t)v->mem[addr+1] << 8 |
+            (uint32_t)v->mem[addr+2] << 16 |
+            (uint32_t)v->mem[addr+3] << 24 
+            );
+        break;
+      case OPSTORE32:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Store32 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->mem[addr] = (uint8_t)(v->r[A] & 0xFF);
+        v->mem[addr+1] = (uint8_t)((v->r[A] >> 8) & 0xFF);
+        v->mem[addr+2] = (uint8_t)((v->r[A] >> 16) & 0xFF);
+        v->mem[addr+3] = (uint8_t)((v->r[A] >> 24) & 0xFF);
         break;
       default:
         v->running = 0;
