@@ -30,7 +30,9 @@ typedef enum {
   OPLOAD8,
   OPSTORE8,
   OPLOAD32,
-  OPSTORE32
+  OPSTORE32,
+  OPCALL,
+  OPRET
 } opcode;
 
 int hostprint(vm *v);
@@ -57,7 +59,8 @@ void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
   int16_t imm, offset;
-  uint32_t addr;
+  uint32_t addr, sp;
+  size_t retaddr;
   v->running = 1;
   while (v->running) {
     op = v->code[v->ip++];
@@ -147,6 +150,43 @@ vmrun(vm *v) {
         v->mem[addr+2] = (uint8_t)((v->r[A] >> 16) & 0xFF);
         v->mem[addr+3] = (uint8_t)((v->r[A] >> 24) & 0xFF);
         break;
+      case OPCALL:
+        offset = (int16_t)((B << 8) | C);
+        sp = (uint32_t)v->r[15] - 4;
+        if (sp + 3 >= VMMEMMAX) {
+          fprintf(stderr, "VM: Call stack overflow @ %u\n", sp);
+          v->running = 0;
+          break;
+        }
+        retaddr = v->ip;
+        v->mem[sp] = (uint8_t)(retaddr & 0xFF);
+        v->mem[sp+1] = (uint8_t)((retaddr >> 8) & 0xFF);
+        v->mem[sp+2] = (uint8_t)((retaddr >> 16) & 0xFF);
+        v->mem[sp+3] = (uint8_t)((retaddr >> 24) & 0xFF);
+        v->r[15] = (vmreg)sp;
+        v->ip = (size_t)((int)v->ip + offset);
+        break;
+      case OPRET:
+        sp = (uint32_t)v->r[15];
+        if (sp + 3 >= VMMEMMAX) {
+          fprintf(stderr, "VM: Ret stack overflow @ %u\n", sp);
+          v->running = 0;
+          break;
+        }
+        retaddr = (size_t)(
+          (uint32_t)v->mem[sp] |
+          (uint32_t)v->mem[sp+1] << 8 |
+          (uint32_t)v->mem[sp+2] << 16 |
+          (uint32_t)v->mem[sp+3] << 24
+        );
+        if (retaddr >= VMCODEMAX) {
+          fprintf(stderr, "VM: Ret to OOB address @ %u\n", sp);
+          v->running = 0;
+          break;
+        }
+        v->r[15] = (vmreg)(sp + 4);
+        v->ip = retaddr;
+        break;
       default:
         v->running = 0;
         break;
@@ -171,6 +211,7 @@ vmtest() {
   vm v = {0};
   v.code = prog;
   v.ip = 0;
+  v.r[15] = VM_STACK_INIT;
   v.hostcall[0] = hostprint;
 
   writei32(&v, VM_ADDR_VERSION, VM_MEMMAP_VERSION);

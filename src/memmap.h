@@ -46,5 +46,6 @@
 
 /* Game Scratch Section */
 #define VM_ADDR_SCRATCH 0x0500
+#define VM_STACK_INIT (VMMEMMAX - 4)
 
 #endif /* MEMMAP_H */
