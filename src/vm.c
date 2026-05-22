@@ -32,7 +32,11 @@ typedef enum {
   OPLOAD32,
   OPSTORE32,
   OPCALL,
-  OPRET
+  OPRET,
+  OPCMP,
+  OPJNZ,
+  OPJNEG,
+  OPJPOS,
 } opcode;
 
 int hostprint(vm *v);
@@ -101,7 +105,7 @@ vmrun(vm *v) {
         break;
       case OPJZ:
         offset = (int16_t)((B << 8) | C);
-        if (!(v->r[A])) { v->ip = (size_t)(v->ip + offset); }
+        if (!(v->r[A])) { v->ip = (size_t)((int)v->ip + offset); }
         break;
       case OPCALLHOST:
         v->hostcall[A](v);
@@ -187,7 +191,25 @@ vmrun(vm *v) {
         v->r[15] = (vmreg)(sp + 4);
         v->ip = retaddr;
         break;
+      case OPCMP:
+        if (v->r[B] < v->r[C]) { v->r[A] = -1; }
+        else if (v->r[B] > v->r[C]) { v->r[A] = 1; }
+        else { v->r[A] = 0; }
+        break;
+      case OPJNZ:
+        offset = (int16_t)((B << 8) | C);
+        if (v->r[A] != 0) { v->ip = (size_t)((int)v->ip + offset); }
+        break;
+      case OPJNEG:
+        offset = (int16_t)((B << 8) | C);
+        if (v->r[A] < 0) { v->ip = (size_t)((int)v->ip + offset); }
+        break;
+      case OPJPOS:
+        offset = (int16_t)((B << 8) | C);
+        if (v->r[A] > 0) { v->ip = (size_t)((int)v->ip + offset); }
+        break;
       default:
+        fprintf(stderr, "Unknown instruction encountered: %u\n", v->r[A]);
         v->running = 0;
         break;
     }
@@ -196,17 +218,40 @@ vmrun(vm *v) {
 
 void
 vmtest() {
-  int32_t ncmds, i, base, type, a0, a1, a2, a3;
   const uint8_t prog[] = {
-    OPLOADI, 1, 0, 5,
-    OPLOADI, 2, 0, 1,
-    OPSUB,   1, 1, 2,
-    OPJZ,    1, 0, 12,
-    OPMOV, 3, 1, 0,
-    OPCALLHOST, 0, 0, 0,
-    OPJMP,   0, 0xFF, 0xEC,
-    OPCALLHOST, 0, 0, 0,
-    OPHALT, 0, 0, 0
+    OPLOADI, 1, 0, 3,
+    OPLOADI, 2, 0, 7,
+    /* call/ret */
+    OPCALL, 0, 0, 0x58, /* offset 108 to call subrot @ 120 */
+    OPCALLHOST, 0, 0, 0, /* expect: r3 = 99 */
+    /* write then read 1234 to scratch */
+    OPLOADI, 4, 0x05, 0x00, /* 0x0500 (VM_ADDR_SCRATCH) */
+    OPLOADI, 3, 0x04, 0xD2,
+    OPSTORE32, 3, 4, 0,
+    OPLOAD32, 5, 4, 0,
+    OPMOV, 3, 5, 0,
+    OPCALLHOST, 0, 0, 0, /* expect: r3 = 1234 */
+    /* write 171 to scratch+4 then read */
+    OPLOADI, 6, 0x05, 0x04,
+    OPLOADI, 3, 0x00, 0xAB,
+    OPSTORE8, 3, 6, 0,
+    OPLOAD8, 7, 6, 0,
+    OPMOV, 3, 7, 0,
+    OPCALLHOST, 0, 0, 0, /* expect: r3 = 171 */
+    /* CMP + JPOS */
+    OPCMP, 0, 2, 1,
+    OPMOV, 3, 0, 0,
+    OPCALLHOST, 0, 0, 0, /* expect: r3 = 1 */
+    OPJPOS, 0, 0x00, 0x04,
+    OPCALLHOST, 0, 0, 0, /* expect skip, should not print */
+    /* CMP + JNZ */
+    OPCMP, 0, 1, 2,
+    OPJNZ, 0, 0x00, 0x04,
+    OPCALLHOST, 0, 0, 0, /* expect skip, should not print */
+    OPHALT, 0, 0, 0,
+    /* subrot from earlier: r[3] = 99 then RET */
+    OPLOADI, 3, 0x00, 0x63,
+    OPRET, 0, 0, 0,
   };
   vm v = {0};
   v.code = prog;
@@ -214,24 +259,7 @@ vmtest() {
   v.r[15] = VM_STACK_INIT;
   v.hostcall[0] = hostprint;
 
-  writei32(&v, VM_ADDR_VERSION, VM_MEMMAP_VERSION);
   vmrun(&v);
-  ncmds = readi32(&v, VM_ADDR_CMD_COUNT);
-  if (ncmds > VM_CMD_MAX) { ncmds = VM_CMD_MAX; }
-  for (i = 0; i < ncmds; i++) {
-    base = VM_ADDR_CMD_BUF + i * VM_CMD_STRIDE;
-    type = readi32(&v, base);
-    a0 = readi32(&v, base+4);
-    a1 = readi32(&v, base+8);
-    a2 = readi32(&v, base+12);
-    a3 = readi32(&v, base+16);
-    /* switch (type) { */
-    /* case VM_CMD_DRAW_SPRITE: break; */
-    /* case VM_CMD_PLAY_SOUND: break; */
-    /* default: break; */
-    /* } */
-  }
-  writei32(&v, VM_ADDR_CMD_COUNT, 0); 
 }
 
 int
