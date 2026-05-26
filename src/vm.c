@@ -37,6 +37,12 @@ typedef enum {
   OPJNZ,
   OPJNEG,
   OPJPOS,
+  OPAND,
+  OPOR,
+  OPXOR,
+  OPSHL,
+  OPSHR,
+  OPNOT,
 } opcode;
 
 int hostprint(vm *v);
@@ -208,6 +214,24 @@ vmrun(vm *v) {
         offset = (int16_t)((B << 8) | C);
         if (v->r[A] > 0) { v->ip = (size_t)((int)v->ip + offset); }
         break;
+      case OPAND:
+        v->r[A] = v->r[B] & v->r[C];
+        break;
+      case OPOR:
+        v->r[A] = v->r[B] | v->r[C];
+        break;
+      case OPXOR:
+        v->r[A] = v->r[B] ^ v->r[C];
+        break;
+      case OPSHL:
+        v->r[A] = (vmreg)((uint32_t)v->r[B] << (v->r[C] & 0x1F));
+        break;
+      case OPSHR:
+        v->r[A] = (vmreg)((uint32_t)v->r[B] >> (v->r[C] & 0x1F));
+        break;
+      case OPNOT:
+        v->r[A] = ~(v->r[B]);
+        break;
       default:
         fprintf(stderr, "Unknown instruction encountered: %u\n", v->r[A]);
         v->running = 0;
@@ -222,7 +246,7 @@ vmtest() {
     OPLOADI, 1, 0, 3,
     OPLOADI, 2, 0, 7,
     /* call/ret */
-    OPCALL, 0, 0, 0x58, /* offset 108 to call subrot @ 120 */
+    OPCALL, 0, 0, 0xA0, /* offset 108 to call subrot @ 120 */
     OPCALLHOST, 0, 0, 0, /* expect: r3 = 99 */
     /* write then read 1234 to scratch */
     OPLOADI, 4, 0x05, 0x00, /* 0x0500 (VM_ADDR_SCRATCH) */
@@ -248,6 +272,31 @@ vmtest() {
     OPCMP, 0, 1, 2,
     OPJNZ, 0, 0x00, 0x04,
     OPCALLHOST, 0, 0, 0, /* expect skip, should not print */
+    /* AND */
+    OPLOADI, 8, 0x00, 0x02,
+    OPAND, 3, 1, 8,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 2 */
+    /* OR */
+    OPLOADI, 8, 0x00, 0x04,
+    OPOR, 3, 1, 8,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 7 */
+    /* XOR */
+    OPXOR, 3, 2, 1,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 4 */
+    /* SHL */
+    OPLOADI, 8, 0x00, 0x01,
+    OPLOADI, 9, 0x00, 0x03,
+    OPSHL, 3, 8, 9,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 8 */
+    /* SHR */
+    OPLOADI, 9, 0x00, 0x02,
+    OPSHR, 3, 3, 9,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 2 */
+    /* NOT */
+    OPLOADI, 8, 0x00, 0x00,
+    OPNOT, 3, 8, 0,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = -1 */
+    /* Done. */
     OPHALT, 0, 0, 0,
     /* subrot from earlier: r[3] = 99 then RET */
     OPLOADI, 3, 0x00, 0x63,
