@@ -8,12 +8,15 @@ typedef int32_t vmreg;
 #define VMCODEMAX 65536
 #define VMMEMMAX 65536
 typedef struct vm vm;
+#define VMMAXCYCLESDEF 200000
 struct vm {
   vmreg r[VMREGCNT];
   uint8_t mem[VMMEMMAX];
   const uint8_t *code;
   size_t ip;
   int running;
+  int32_t cyclemax;
+  int32_t cyclerem;
   int (*hostcall[32])(struct vm *);
 };
 typedef enum {
@@ -66,6 +69,25 @@ readi32(const vm *v, uint16_t addr) {
 }
 
 void
+vmfrmstart(vm *v, int32_t deltams, int32_t input,
+    int32_t mousex, int32_t mousey, int32_t screenw,
+    int32_t screenh) {
+  v->cyclerem = v->cyclemax;
+  writei32(v, VM_ADDR_VERSION, VM_MEMMAP_VERSION);
+  writei32(v, VM_ADDR_DELTA_MS, deltams);
+  writei32(v, VM_ADDR_INPUT, input);
+  writei32(v, VM_ADDR_MOUSE_X, mousex);
+  writei32(v, VM_ADDR_MOUSE_Y, mousey);
+  writei32(v, VM_ADDR_SCREEN_W, screenw);
+  writei32(v, VM_ADDR_SCREEN_H, screenh);
+}
+
+void
+vmfrmend(vm *v) {
+  writei32(v, VM_ADDR_CMD_COUNT, 0);
+}
+
+void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
   int16_t imm, offset;
@@ -73,6 +95,15 @@ vmrun(vm *v) {
   size_t retaddr;
   v->running = 1;
   while (v->running) {
+    if (v->cyclemax > 0) {
+      if (v->cyclerem <= 0) {
+        fprintf(stderr, "Cycle limit exceeded.\n");
+        /* TODO: Change this from halting to "skipping" until next frame. */
+        v->running = 0;
+        break;
+      }
+      v->cyclerem--;
+    }
     op = v->code[v->ip++];
     A = v->code[v->ip++];
     B = v->code[v->ip++];
@@ -305,10 +336,13 @@ vmtest() {
   vm v = {0};
   v.code = prog;
   v.ip = 0;
+  v.cyclemax = 0;
   v.r[15] = VM_STACK_INIT;
   v.hostcall[0] = hostprint;
 
+  vmfrmstart(&v, 0, 0, 0, 0, 640, 480);
   vmrun(&v);
+  vmfrmend(&v);
 }
 
 int
