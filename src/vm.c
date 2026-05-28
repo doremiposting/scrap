@@ -11,6 +11,7 @@ typedef struct vm vm;
 #define VMMAXCYCLESDEF 200000
 struct vm {
   vmreg r[VMREGCNT];
+  float fr[VMREGCNT];
   uint8_t mem[VMMEMMAX];
   const uint8_t *code;
   size_t ip;
@@ -46,6 +47,17 @@ typedef enum {
   OPSHL,
   OPSHR,
   OPNOT,
+  FLOADI,
+  FMOV,
+  FADD,
+  FSUB,
+  FMUL,
+  FDIV,
+  FCMP,
+  FLOAD32,
+  FSTORE32,
+  ITOF,
+  FTOI,
 } opcode;
 
 int hostprint(vm *v);
@@ -262,6 +274,75 @@ vmrun(vm *v) {
         break;
       case OPNOT:
         v->r[A] = ~(v->r[B]);
+        break;
+      case FLOADI:
+        /* TODO: Wire this up later. */
+        v->fr[A] = 0.0f;
+        break;
+      case FMOV:
+        v->fr[A] = v->fr[B];
+        break;
+      case FADD:
+        v->fr[A] = v->fr[B] + v->fr[C];
+        break;
+      case FSUB:
+        v->fr[A] = v->fr[B] - v->fr[C];
+        break;
+      case FMUL:
+        v->fr[A] = v->fr[B] * v->fr[C];
+        break;
+      case FDIV:
+        if (v->fr[C] == 0.0f) {
+          fprintf(stderr, "VM: Encountered division by zero. Halting.\n");
+          v->running = 0;
+          break;
+        }
+        v->fr[A] = v->fr[B] / v->fr[C];
+        break;
+      case FCMP:
+        if (v->fr[B] < v->fr[C]) { v->fr[A] = -1; }
+        else if (v->fr[B] > v->fr[C]) { v->fr[A] = 1; }
+        else { v->fr[A] = 0; }
+        break;
+      case FLOAD32:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Load32 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->fr[A] = 0.0f; /* TODO: Fix this mess */
+        /*
+        v->fr[A] = (vmreg)(
+            (float)v->mem[addr] |
+            (float)v->mem[addr+1] << 8 |
+            (float)v->mem[addr+2] << 16 |
+            (float)v->mem[addr+3] << 24 
+            );
+          */
+        break;
+      case FSTORE32:
+        addr = (uint32_t)v->r[B];
+        if (addr >= VMMEMMAX) {
+          fprintf(stderr, "VM: Store32 OOB @ %u).\n", addr);
+          v->running = 0;
+          break;
+        }
+        v->mem[addr] = v->mem[addr+1] =
+          v->mem[addr+2] = v->mem[addr+3] = 0.0f;
+        /* TODO: Fix this mess */
+        /*
+        v->mem[addr] = (float)(v->fr[A] & 0xFF);
+        v->mem[addr+1] = (float)((v->fr[A] >> 8) & 0xFF);
+        v->mem[addr+2] = (float)((v->fr[A] >> 16) & 0xFF);
+        v->mem[addr+3] = (float)((v->fr[A] >> 24) & 0xFF);
+        */
+        break;
+      case ITOF:
+        v->fr[A] = (float)v->r[B];
+        break;
+      case FTOI:
+        v->r[A] = (int32_t)v->fr[B];
         break;
       default:
         fprintf(stderr, "Unknown instruction encountered: %u\n", v->r[A]);
