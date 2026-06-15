@@ -5,8 +5,8 @@
 
 #define VMREGCNT 16
 typedef int32_t vmreg;
-#define VMCODEMAX 65536
-#define VMMEMMAX 65536
+#define VMCODEMAX (256 * 1024)
+#define VMMEMMAX (256 * 1024)
 typedef struct vm vm;
 #define VMMAXCYCLESDEF 200000
 struct vm {
@@ -59,6 +59,10 @@ typedef enum {
   ITOF,
   FTOI,
 } opcode;
+typedef union {
+  uint32_t u;
+  float f;
+} u32f;
 
 int hostprint(vm *v);
 
@@ -102,9 +106,11 @@ vmfrmend(vm *v) {
 void
 vmrun(vm *v) {
   uint8_t op, A, B, C;
-  int16_t imm, offset;
+  int32_t imm;
+  int16_t offset;
   uint32_t addr, sp;
   size_t retaddr;
+  u32f x;
   v->running = 1;
   while (v->running) {
     if (v->cyclemax > 0) {
@@ -128,7 +134,14 @@ vmrun(vm *v) {
         v->r[A] = v->r[B];
         break;
       case OPLOADI:
-        imm = (int16_t)((B << 8) | C);
+        imm = 
+          (int32_t)(
+            (uint32_t)v->code[v->ip] << 24 |
+            (uint32_t)v->code[v->ip + 1] << 16 |
+            (uint32_t)v->code[v->ip + 2] << 8 |
+            (uint32_t)v->code[v->ip + 3]
+          );
+        v->ip += 4;
         v->r[A] = imm;
         break;
       case OPADD:
@@ -311,15 +324,12 @@ vmrun(vm *v) {
           v->running = 0;
           break;
         }
-        v->fr[A] = 0.0f; /* TODO: Fix this mess */
-        /*
-        v->fr[A] = (vmreg)(
-            (float)v->mem[addr] |
-            (float)v->mem[addr+1] << 8 |
-            (float)v->mem[addr+2] << 16 |
-            (float)v->mem[addr+3] << 24 
-            );
-          */
+        addr = (uint32_t)v->r[B];
+        x.u = (uint32_t)v->mem[addr] << 24 |
+              (uint32_t)v->mem[addr+1] << 16 |
+              (uint32_t)v->mem[addr+2] << 8 |
+              (uint32_t)v->mem[addr+3];
+        v->fr[A] = x.f;
         break;
       case FSTORE32:
         addr = (uint32_t)v->r[B];
@@ -328,15 +338,12 @@ vmrun(vm *v) {
           v->running = 0;
           break;
         }
-        v->mem[addr] = v->mem[addr+1] =
-          v->mem[addr+2] = v->mem[addr+3] = 0.0f;
-        /* TODO: Fix this mess */
-        /*
-        v->mem[addr] = (float)(v->fr[A] & 0xFF);
-        v->mem[addr+1] = (float)((v->fr[A] >> 8) & 0xFF);
-        v->mem[addr+2] = (float)((v->fr[A] >> 16) & 0xFF);
-        v->mem[addr+3] = (float)((v->fr[A] >> 24) & 0xFF);
-        */
+        addr = (uint32_t)v->r[B];
+        x.f = v->fr[A];
+        v->mem[addr] = (uint8_t)(x.u >> 24);
+        v->mem[addr+1] = (uint8_t)(x.u >> 16);
+        v->mem[addr+2] = (uint8_t)(x.u >> 8);
+        v->mem[addr+3] = (uint8_t)(x.u);
         break;
       case ITOF:
         v->fr[A] = (float)v->r[B];
@@ -355,21 +362,28 @@ vmrun(vm *v) {
 void
 vmtest() {
   const uint8_t prog[] = {
-    OPLOADI, 1, 0, 3,
-    OPLOADI, 2, 0, 7,
+    OPLOADI, 1, 0, 0,
+    0, 0, 0, 3,
+    OPLOADI, 2, 0, 0,
+    0, 0, 0, 7,
     /* call/ret */
-    OPCALL, 0, 0, 0xA0, /* offset 108 to call subrot @ 120 */
+    /* It's rows*4: you want (total rows until subrot) * 4 - (rows proceeding this line) * 4, numbnuts*/
+    OPCALL, 0, 0x00, 0xC8, /* offset 108 to call subrot @ 120 */
     OPCALLHOST, 0, 0, 0, /* expect: r3 = 99 */
     /* write then read 1234 to scratch */
-    OPLOADI, 4, 0x05, 0x00, /* 0x0500 (VM_ADDR_SCRATCH) */
-    OPLOADI, 3, 0x04, 0xD2,
+    OPLOADI, 4, 0, 0, /* 0x0500 (VM_ADDR_SCRATCH) */
+    0, 0, 0x50, 0,
+    OPLOADI, 3, 0, 0,
+    0, 0, 0x04, 0xD2,
     OPSTORE32, 3, 4, 0,
     OPLOAD32, 5, 4, 0,
     OPMOV, 3, 5, 0,
     OPCALLHOST, 0, 0, 0, /* expect: r3 = 1234 */
     /* write 171 to scratch+4 then read */
-    OPLOADI, 6, 0x05, 0x04,
-    OPLOADI, 3, 0x00, 0xAB,
+    OPLOADI, 6, 0, 0,
+    0, 0, 0x05, 0x04,
+    OPLOADI, 3, 0, 0,
+    0, 0, 0, 0xAB,
     OPSTORE8, 3, 6, 0,
     OPLOAD8, 7, 6, 0,
     OPMOV, 3, 7, 0,
@@ -385,33 +399,40 @@ vmtest() {
     OPJNZ, 0, 0x00, 0x04,
     OPCALLHOST, 0, 0, 0, /* expect skip, should not print */
     /* AND */
-    OPLOADI, 8, 0x00, 0x02,
+    OPLOADI, 8, 0, 0,
+    0, 0, 0, 0x02,
     OPAND, 3, 1, 8,
     OPCALLHOST, 0, 0, 0, /* expect r3 = 2 */
     /* OR */
-    OPLOADI, 8, 0x00, 0x04,
+    OPLOADI, 8, 0, 0,
+    0, 0, 0, 0x04,
     OPOR, 3, 1, 8,
     OPCALLHOST, 0, 0, 0, /* expect r3 = 7 */
     /* XOR */
     OPXOR, 3, 2, 1,
     OPCALLHOST, 0, 0, 0, /* expect r3 = 4 */
     /* SHL */
-    OPLOADI, 8, 0x00, 0x01,
-    OPLOADI, 9, 0x00, 0x03,
+    OPLOADI, 8, 0, 0,
+    0, 0, 0, 0x01,
+    OPLOADI, 9, 0, 0,
+    0, 0, 0, 0x03,
     OPSHL, 3, 8, 9,
     OPCALLHOST, 0, 0, 0, /* expect r3 = 8 */
     /* SHR */
-    OPLOADI, 9, 0x00, 0x02,
+    OPLOADI, 9, 0, 0,
+    0, 0, 0, 0x02,
     OPSHR, 3, 3, 9,
     OPCALLHOST, 0, 0, 0, /* expect r3 = 2 */
     /* NOT */
-    OPLOADI, 8, 0x00, 0x00,
+    OPLOADI, 8, 0, 0,
+    0, 0, 0, 0,
     OPNOT, 3, 8, 0,
     OPCALLHOST, 0, 0, 0, /* expect r3 = -1 */
     /* Done. */
     OPHALT, 0, 0, 0,
     /* subrot from earlier: r[3] = 99 then RET */
-    OPLOADI, 3, 0x00, 0x63,
+    OPLOADI, 3, 0, 0,
+    0, 0, 0, 0x63,
     OPRET, 0, 0, 0,
   };
   vm v = {0};
