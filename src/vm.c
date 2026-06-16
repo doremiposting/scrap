@@ -1,14 +1,16 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define VMCODEMAX (256 * 1024)
+#define VMMEMMAX (256 * 1024)
 #include "memmap.h"
+#include "vm.h"
 
 #define VMREGCNT 16
 typedef int32_t vmreg;
-#define VMCODEMAX (256 * 1024)
-#define VMMEMMAX (256 * 1024)
 typedef struct vm vm;
 #define VMMAXCYCLESDEF 200000
+#define VMHOSTCALLS 256
 struct vm {
   vmreg r[VMREGCNT];
   float fr[VMREGCNT];
@@ -18,7 +20,7 @@ struct vm {
   int running;
   int32_t cyclemax;
   int32_t cyclerem;
-  int (*hostcall[32])(struct vm *);
+  int (*hostcall[VMHOSTCALLS])(struct vm *);
 };
 typedef enum {
   OPHALT = 0,
@@ -67,7 +69,7 @@ typedef union {
 int hostprint(vm *v);
 
 void
-writei32(vm *v, uint16_t addr, int32_t val) {
+writei32(vm *v, uint32_t addr, int32_t val) {
   v->mem[addr] = (uint8_t)(val & 0xFF);
   v->mem[addr+1] = (uint8_t)((val >> 8) & 0xFF);
   v->mem[addr+2] = (uint8_t)((val >> 16) & 0xFF);
@@ -75,7 +77,7 @@ writei32(vm *v, uint16_t addr, int32_t val) {
 }
 
 int32_t
-readi32(const vm *v, uint16_t addr) {
+readi32(const vm *v, uint32_t addr) {
   return (int32_t)(
       (uint32_t)v->mem[addr] |
       (uint32_t)v->mem[addr+1] << 8 |
@@ -170,7 +172,11 @@ vmrun(vm *v) {
         if (!(v->r[A])) { v->ip = (size_t)((int)v->ip + offset); }
         break;
       case OPCALLHOST:
-        v->hostcall[A](v);
+        if (A < VMHOSTCALLS && v->hostcall[A]) { v->hostcall[A](v); }
+        else {
+          fprintf(stderr, "VM: OPCALLHOST on invalid host call: %d. Halting.\n", v->hostcall[A]);
+          v->running = 0;
+        }
         break;
       case OPLOAD8:
         addr = (uint32_t)v->r[B];
@@ -192,7 +198,7 @@ vmrun(vm *v) {
         break;
       case OPLOAD32:
         addr = (uint32_t)v->r[B];
-        if (addr >= VMMEMMAX) {
+        if (addr + 3 >= VMMEMMAX) {
           fprintf(stderr, "VM: Load32 OOB @ %u).\n", addr);
           v->running = 0;
           break;
@@ -206,7 +212,7 @@ vmrun(vm *v) {
         break;
       case OPSTORE32:
         addr = (uint32_t)v->r[B];
-        if (addr >= VMMEMMAX) {
+        if (addr + 3 >= VMMEMMAX) {
           fprintf(stderr, "VM: Store32 OOB @ %u).\n", addr);
           v->running = 0;
           break;
@@ -289,8 +295,13 @@ vmrun(vm *v) {
         v->r[A] = ~(v->r[B]);
         break;
       case FLOADI:
-        /* TODO: Wire this up later. */
-        v->fr[A] = 0.0f;
+        x.u = 
+            (uint32_t)v->code[v->ip] << 24 |
+            (uint32_t)v->code[v->ip + 1] << 16 |
+            (uint32_t)v->code[v->ip + 2] << 8 |
+            (uint32_t)v->code[v->ip + 3];
+        v->ip += 4;
+        v->fr[A] = x.f;
         break;
       case FMOV:
         v->fr[A] = v->fr[B];
@@ -313,37 +324,40 @@ vmrun(vm *v) {
         v->fr[A] = v->fr[B] / v->fr[C];
         break;
       case FCMP:
-        if (v->fr[B] < v->fr[C]) { v->fr[A] = -1; }
-        else if (v->fr[B] > v->fr[C]) { v->fr[A] = 1; }
-        else { v->fr[A] = 0; }
+        if (v->fr[B] != v->fr[B] || v->fr[C] != v->fr[C]) {
+          fprintf(stderr, "VM: Encountered NaN in FCMP call. Halting.\n");
+          v->running = 0;
+          break;
+        }
+        if (v->fr[B] < v->fr[C]) { v->r[A] = -1; }
+        else if (v->fr[B] > v->fr[C]) { v->r[A] = 1; }
+        else { v->r[A] = 0; }
         break;
       case FLOAD32:
         addr = (uint32_t)v->r[B];
-        if (addr >= VMMEMMAX) {
+        if (addr + 3 >= VMMEMMAX) {
           fprintf(stderr, "VM: Load32 OOB @ %u).\n", addr);
           v->running = 0;
           break;
         }
-        addr = (uint32_t)v->r[B];
-        x.u = (uint32_t)v->mem[addr] << 24 |
-              (uint32_t)v->mem[addr+1] << 16 |
-              (uint32_t)v->mem[addr+2] << 8 |
-              (uint32_t)v->mem[addr+3];
+        x.u = (uint32_t)v->mem[addr] |
+              (uint32_t)v->mem[addr+1] << 8 |
+              (uint32_t)v->mem[addr+2] << 16 |
+              (uint32_t)v->mem[addr+3] << 24;
         v->fr[A] = x.f;
         break;
       case FSTORE32:
         addr = (uint32_t)v->r[B];
-        if (addr >= VMMEMMAX) {
+        if (addr + 3 >= VMMEMMAX) {
           fprintf(stderr, "VM: Store32 OOB @ %u).\n", addr);
           v->running = 0;
           break;
         }
-        addr = (uint32_t)v->r[B];
         x.f = v->fr[A];
-        v->mem[addr] = (uint8_t)(x.u >> 24);
-        v->mem[addr+1] = (uint8_t)(x.u >> 16);
-        v->mem[addr+2] = (uint8_t)(x.u >> 8);
-        v->mem[addr+3] = (uint8_t)(x.u);
+        v->mem[addr] = (uint8_t)(x.u);
+        v->mem[addr+1] = (uint8_t)(x.u >> 8);
+        v->mem[addr+2] = (uint8_t)(x.u >> 16);
+        v->mem[addr+3] = (uint8_t)(x.u >> 24);
         break;
       case ITOF:
         v->fr[A] = (float)v->r[B];
@@ -368,7 +382,7 @@ vmtest() {
     0, 0, 0, 7,
     /* call/ret */
     /* It's rows*4: you want (total rows until subrot) * 4 - (rows proceeding this line) * 4, numbnuts*/
-    OPCALL, 0, 0x00, 0xC8, /* offset 108 to call subrot @ 120 */
+    OPCALL, 0, 0x01, 0x18, /* offset 108 to call subrot @ 120 */
     OPCALLHOST, 0, 0, 0, /* expect: r3 = 99 */
     /* write then read 1234 to scratch */
     OPLOADI, 4, 0, 0, /* 0x0500 (VM_ADDR_SCRATCH) */
@@ -428,6 +442,29 @@ vmtest() {
     0, 0, 0, 0,
     OPNOT, 3, 8, 0,
     OPCALLHOST, 0, 0, 0, /* expect r3 = -1 */
+    /* FLOADI + FTOI */
+    FLOADI, 0, 0, 0,
+    0x40, 0x40, 0, 0,
+    FTOI, 3, 0, 0,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 3 */
+    /* FSTORE32 + FLOAD32 */
+    OPLOADI, 4, 0, 0,
+    0, 0, 0x05, 0x08,
+    FSTORE32, 0, 4, 0,
+    FLOAD32, 1, 4, 0,
+    FTOI, 3, 1, 0,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 3 */
+    /* FCMP */
+    FLOADI, 2, 0, 0,
+    0x3F, 0x80, 0, 0,
+    FLOADI, 3, 0, 0,
+    0x40, 0, 0, 0,
+    FCMP, 0, 2, 3,
+    OPMOV, 3, 0, 0,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = -1 */
+    FCMP, 0, 2, 2,
+    OPMOV, 3, 0, 0,
+    OPCALLHOST, 0, 0, 0, /* expect r3 = 0 */
     /* Done. */
     OPHALT, 0, 0, 0,
     /* subrot from earlier: r[3] = 99 then RET */
@@ -450,5 +487,24 @@ vmtest() {
 int
 hostprint(vm *v) {
   fprintf(stderr, "r3 = %d\n", v->r[3]);
+  return 0;
+}
+
+int
+vmcmdcount(const vm *v) {
+  return (int)readi32(v, VM_ADDR_CMD_COUNT);
+}
+int
+vmcmdget(const vm *v, int i, vmcmd *out) {
+  uint32_t base;
+  int count;
+  count = vmcmdcount(v);
+  if (i < 0 || i >= count) { return -1; }
+  base = VM_ADDR_CMD_BUF + (uint32_t)(i * VM_CMD_STRIDE);
+  out->type = readi32(v, base);
+  out->arg[0] = readi32(v, base+4);
+  out->arg[1] = readi32(v, base+8);
+  out->arg[2] = readi32(v, base+12);
+  out->arg[3] = readi32(v, base+16);
   return 0;
 }
