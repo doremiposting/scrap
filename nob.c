@@ -128,11 +128,16 @@ main(int argc, char *argv[]) {
   boilerplate();
   compilefile("src/vm.c", "build/vm.o");
 
+  boilerplate();
+  compilefile("src/scc.c", "build/scc.o");
+
 #if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lasound", "-lmpg123", "-lpthread",
     "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxalsa.o",
     "build/gfxobj.o", "build/wx11.o", "build/vm.o");
+	if (!cmd_run(&cmd)) { return 1; }
+  cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scc", "build/scc.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)
   /* TODO: Fix wcocoa & opengl on mac
@@ -149,6 +154,8 @@ main(int argc, char *argv[]) {
     "build/main.o", "build/game.o", "build/gfx.o", "build/event.o",
     "build/gfxobj.o", "build/wquartz.o", "build/gfxsw.o", "build/vm.o",
     "build/sfxca.o");
+	if (!cmd_run(&cmd)) { return 1; }
+  cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scc-darwin", "build/scc.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #endif
 }

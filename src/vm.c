@@ -22,45 +22,6 @@ struct vm {
   int32_t cyclerem;
   int (*hostcall[VMHOSTCALLS])(struct vm *);
 };
-typedef enum {
-  OPHALT = 0,
-  OPMOV,
-  OPLOADI,
-  OPADD,
-  OPSUB,
-  OPMUL,
-  OPDIV,
-  OPJMP,
-  OPJZ,
-  OPCALLHOST,
-  OPLOAD8,
-  OPSTORE8,
-  OPLOAD32,
-  OPSTORE32,
-  OPCALL,
-  OPRET,
-  OPCMP,
-  OPJNZ,
-  OPJNEG,
-  OPJPOS,
-  OPAND,
-  OPOR,
-  OPXOR,
-  OPSHL,
-  OPSHR,
-  OPNOT,
-  FLOADI,
-  FMOV,
-  FADD,
-  FSUB,
-  FMUL,
-  FDIV,
-  FCMP,
-  FLOAD32,
-  FSTORE32,
-  ITOF,
-  FTOI,
-} opcode;
 typedef union {
   uint32_t u;
   float f;
