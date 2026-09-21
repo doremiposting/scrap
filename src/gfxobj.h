@@ -10,6 +10,8 @@ typedef struct {
 typedef struct {
   Vertex *v;
   unsigned int cnt;
+  unsigned int *idx;
+  unsigned int idxc;
 } Mesh;
 
 typedef struct { float x, y, z; } Vec3f;

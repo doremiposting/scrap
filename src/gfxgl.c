@@ -1,182 +1,170 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
-#include <time.h>
-
-#ifdef __linux__
 #include <GL/gl.h>
-#include <GL/glx.h>
-#include <GL/glxext.h>
-#elifdef __APPLE__
-#include <OpenGL/gl.h>
-#endif
-
-#include "gfx.h"
+#include <GL/glu.h>
 #include "gfxgl.h"
-#ifdef __linux__
-#include "wx11.h"
-#elifdef __APPLE__
-#include "wcocoa.h"
-#endif
 #include "gfxobj.h"
-#include "sfx.h"
-#ifdef __linux__
-#include "sfxalsa.h"
-#elifdef __APPLE__
-#include "sfxca.h"
-#endif
-#include "event.h"
+#include "gfxterrain.h"
+#include "gpchar.h"
+#include "gpplayer.h"
 
-float a;
-float cx, cy, mag, rad, dx, dy;
-int mmx, mmy;
-double da;
 Mesh *tp;
-static float fovy;
-int pausesim, wiremesh, doprofile;
+int wiremesh;
+int animate;
 
+#define updateclamp(x) do {x = x > (2*M_PI) ? x - (2*M_PI) : x < (-2*M_PI) ? x += (-2*M_PI) : x;} while (0)
 void
-lookat(float ex, float ey, float ez,
-       float cx, float cy, float cz,
-       float ux, float uy, float uz) {
-  float fx = cx - ex;
-  float fy = cy - ey;
-  float fz = cz - ez;
-  float fl = sqrtf(fx*fx + fy*fy + fz*fz);
-  fx /= fl; fy /= fl; fz /= fl;
-
-  float ul = sqrtf(ux*ux + uy*uy + uz*uz);
-  ux /= ul; uy /= ul; uz /= ul;
-
-  float sx = fy*uz - fz*uy;
-  float sy = fz*ux - fx*uz;
-  float sz = fx*uy - fy*ux;
-
-  float ux2 = sy*fz - sz*fy;
-  float uy2 = sz*fx - sx*fz;
-  float uz2 = sx*fy - sy*fx;
-
-  float m[16] = {
-    sx,  ux2, -fx, 0,
-    sy,  uy2, -fy, 0,
-    sz,  uz2, -fz, 0,
-    0,   0,    0,  1
-  };
-
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glMultMatrixf(m);
-  glTranslatef(-ex, -ey, -ez);
-}
-
-void
-drawm(const Mesh *m) {
-  unsigned int i;
-  wiremesh ? glPolygonMode(GL_FRONT, GL_LINE)
-    : glPolygonMode(GL_FRONT, GL_FILL);
-  glBegin(GL_TRIANGLES);
-  for (i = 0; i < m->cnt; i++) {
-    glNormal3f(m->v[i].nx, m->v[i].ny, m->v[i].nz);
-    glTexCoord2f(m->v[i].u, m->v[i].v);
-    glVertex3f(m->v[i].x, m->v[i].y, m->v[i].z);
+update(int state, int ox, int nx, int oy, int ny) {
+  int dx, dy;
+  dx = ox-nx; dy = ny-oy;
+  switch (state) {
+    case PAN:
+      P->view->x -= dx / 100.0f; P->view->y -= dy / 100.0f;
+      break;
+    case ROTATE:
+      P->view->pitch += (dy * 180.0f) / 50000.0f;
+      P->view->yaw -= (dx * 180.0f) / 50000.0f;
+      updateclamp(P->view->pitch); updateclamp(P->view->yaw);
+      break;
+    case ZOOM:
+      P->view->z -= (dx + dy) / 1000.0f;
+      break;
   }
-  glEnd();
 }
 
 void
-resizegl() {
-  float fh, fw;
-  if (WHEIGHT == 0) { WHEIGHT = 1; }
-  glViewport(0, 0, WWIDTH, WHEIGHT);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  fh = tanf(fovy * 0.5f * ((float)(M_PI) / 180.f)) * 0.1f;
-  fw = fh * (float)WWIDTH/(float)WHEIGHT;
-  glFrustum(-fw, fw, -fh, fh, 0.1f, 100.0f);
-
-  glMatrixMode(GL_MODELVIEW);
-}
-
-void
-ginit() {
-  tp = loadobj("assets/teapot.obj");
-  a = 0.0f;
-  da = 60.0f; /* The sw render logic uses radians, opengl uses degrees. */
-  cx = 0.0f;
-  cy = 0.0f;
-  dx = 0.05f;
-  dy = 0.05f;
-  mmx = 1;
-  mmy = 1;
-  rad = 0.75;
-  float top, bottom, right, left;
-  double fovyrad;
-  pausesim = 0; wiremesh = 0; doprofile = 1;
-  glViewport(0, 0, (int)WWIDTH, (int)WHEIGHT);
-  fovy = 60.0f;
-  fovyrad = fovy * (M_PI / 180.0f);
-  top = tanf((float)fovyrad * 0.5f) * 0.1f;
-  bottom = -top;
-  right = top * ((float)WWIDTH / (float)WHEIGHT);
-  left = -right;
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glFrustum(left, right, bottom, top, 0.1f, 1000.0f); // TODO: Update frustum on window resize
-  //glOrtho(0, WWIDTH, 0, WHEIGHT, -1, 1);
-  glMatrixMode(GL_MODELVIEW);
+glinit() {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
-  initsfx();
+  tp = loadobj("assets/teapot.obj");
+  playerbuildup("assets/pill.obj");
+  playermove2(3, 3, 3);
+  terrbuildup();
+}
+
+void
+glkill() {
+  terrteardown();
+  playerteardown(P->id);
+  killmesh(tp);
+}
+
+void
+glreshape(int width, int height) {
+  glViewport(0, 0, width, height);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluPerspective(60.0, (float)width/(float)height, 0.001, 100.0);
+  glMatrixMode(GL_MODELVIEW);
+}
+
+void
+drawmesh(const Mesh *m) {
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glVertexPointer(3, GL_FLOAT, sizeof(Vertex), m->v);
+  glDrawElements(GL_TRIANGLES, m->idxc, GL_UNSIGNED_INT, m->idx);
+  glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void
+drawterrain() {
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glVertexPointer(3, GL_FLOAT, sizeof(TV), tvfield);
+  glDrawElements(GL_TRIANGLES, triiacnt, GL_UNSIGNED_INT, triia);
+  glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void
 render() {
-  struct timespec frmst, frmend;
-  GETNS(frmst); GETNS(frmend);
-  if (doprofile) { GETNS(frmst); }
-	glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
-	/* glClearColor(0.0f, 0.0f, 0.0f, 1.0f); */
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  static float spin = 0.0f;
+  static float tpdx = 0.05f;
+  static float tpdy = 0.05f;
+  static float tpcx = 0.0f;
+  static float tpcy = 0.0f;
+  static float dspin = 3.0f;
+  static int tpmx = 1;
+  static int tpmy = 1;
+  static float tprad = 0.75f;
+  glClearColor(0.39f, 0.58f, 0.92f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-	lookat(3.0, 3.0, 3.0, 0.0, 0.0, -4.5, 0, 1, 0);
-	glPushMatrix();
-  glTranslatef(0.0f, 0.0f, -4.5f); 
-  glBegin(GL_LINES);
-		glColor3f(1,0,0);
-		glVertex3f(0,0,-0.001f);
-		glVertex3f(10,0,-0.002f);
-		glColor3f(0,1,0);
-		glVertex3f(0,0,-0.001f);
-		glVertex3f(0,10,-0.002f);
-		glColor3f(0,0,1);
-		glVertex3f(0,0,-0.001f);
-		glVertex3f(0,0,10);
-  glEnd();
-	glPopMatrix();
+  /* XXX: This one's for managing scale a little */
+  /* glTranslatef(0.0f, 0.0f, -12.0f); */
   glPushMatrix();
-  glTranslatef(cx, cy, -5.0f); 
-  glRotatef(a, 0.0f, 1.0f, 0.0f);
-  drawm(tp);
+  glRotatef(P->view->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->view->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glTranslatef(-P->view->x, -P->view->y, -P->view->z);
+  glColor3f(0, 1, 1);
+  drawterrain();
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawterrain();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+  glPushMatrix();
+  glColor3f(0.85f,1,0.85f);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glTranslatef(P->x, P->y, P->z);
+  glRotatef(P->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->roll * (180/M_PI), 0.0f, 0.0f, 1.0f);
+  drawmesh(P->m);
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawmesh(P->m);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
   glPopMatrix();
-  if (!pausesim) {
-    a += 3.0f;
-    cx += (dx*(float)mmx);
-    if (cx > 3.8f-rad) { cx = 3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); } if (cx < -3.8f-rad) { cx = -3.8f-rad; mmx *= -1; triggersfx(SFX_BOOM, 1); }
-    cy += (dx*(float)mmy);
-    if (cy > 2.8f-rad) { cy = 2.8f-rad; mmy *= -1; triggersfx(SFX_BOOM, 1); } if (cy < -2.8f-rad) { cy = -2.8f - rad; mmy *= -1; triggersfx(SFX_BOOM, 1); }
+  /* XXX: Front face indicator, remove me later. */
+  glPushMatrix();
+  glTranslatef(P->x, P->y, P->z);
+  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glDisable(GL_CULL_FACE);
+  glColor3f(1.0f, 0.0f, 0.0f);
+  glBegin(GL_LINES);
+    /* shaft */
+    glVertex3f(0, 0, 0); glVertex3f(0, 0, 2.0f);
+    /* arrowhead */
+    glVertex3f(0, 0, 2.0f); glVertex3f(0.3f, 0, 1.6f);
+    glVertex3f(0, 0, 2.0f); glVertex3f(-0.3f, 0., 1.6f);
+  glEnd();
+  glEnable(GL_CULL_FACE);
+  glPopMatrix();
+  glPushMatrix();
+  glColor3f(0.95f, 1, 0.95f);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glTranslatef(tpcx, tpcy, -5.0f);
+  glRotatef(spin, 0.0f, 1.0f, 0.0f);
+  drawmesh(tp);
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawmesh(tp);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
-  if (doprofile) {
-    GETNS(frmend);
-    fprintf(stderr, "\rFPS: %.2f, FT: %lld us", (1000000000.0 /((double)(elapsedr))), DIFFNS(frmst, frmend)/1000);
-    fflush(stderr);
+  glPopMatrix();
+  glPushMatrix();
+  glDisable(GL_CULL_FACE);
+  glBegin(GL_LINES);
+    glColor3f(1,0,0);
+    glVertex3f(0,0,-0.001f); glVertex3f(10,0,-0.002f);
+    glColor3f(0,1,0);
+    glVertex3f(0,0,-0.001f); glVertex3f(0,10,-0.002f);
+    glColor3f(0,0,1);
+    glVertex3f(0,0,-0.001f); glVertex3f(0,0,10);
+  glEnd();
+  glEnable(GL_CULL_FACE);
+  glPopMatrix();
+  glPopMatrix();
+  if (animate) {
+    spin += dspin;
+    tpcx += (tpdx * (float)tpmx);
+    if (tpcx > 3.8f-tprad) { tpcx = 3.8f-tprad; tpmx *= -1; } if (tpcx < -3.8f-tprad) { tpcx = -3.8f-tprad; tpmx *= -1; }
+    tpcy += (tpdy * (float)tpmy);
+    if (tpcy > 2.8f-tprad) { tpcy = 2.8f-tprad; tpmy *= -1; } if (tpcy < -2.8f-tprad) { tpcy = -2.8f-tprad; tpmy *= -1; }
   }
-}
-
-void
-gkill() {
-  fprintf(stderr, "\rDone.                    \n");
-  killsfx();
-  killmesh(tp);
+  glFlush();
 }

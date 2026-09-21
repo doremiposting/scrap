@@ -1,31 +1,21 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#include "main.h"
-
-#define NUMEVS 2
-
 typedef enum {
-  SOMEEV,
-  NOTANEV
-} Event;
+  W_HELD,
+  A_HELD,
+  S_HELD,
+  D_HELD,
+  END_OF_EVENT_ENUM
+} Scrapevent;
 
-#define BUFFERSZ 8
+extern char *evtable;
 
-typedef struct {
-  Event q[BUFFERSZ];
-  int head;
-  int tail;
-  size_t count;
-} Evbuffer;
-
-void initbuffer(Evbuffer *b);
-int buffull(Evbuffer *b);
-int bufempty(Evbuffer *b);
-int bufqueue(Evbuffer *b, Event e);
-int bufdeq(Evbuffer *b, Event *e);
-
-typedef void (*evhandler)(void);
-void execev(Event e);
+void buildevtbl();
+void killevtbl();
+void setevent(Scrapevent e, char v);
+void modshfctr(float dxs, float dym, float dzs);
+void handlephysics(double dt);
+void handleglobalevents(double dt);
 
 #endif /* EVENT_H */

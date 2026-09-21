@@ -48,42 +48,96 @@ main(int argc, char *argv[]) {
   if (!mkdir_if_not_exists("./build/")) { return 1; }
 
   boilerplate();
-  cmd_append(&cmd, "-lGL");
+  cmd_append(&cmd, "-lm");
+  compilefile("src/gfx.c", "build/gfx.o");
+
+  #ifdef __linux__
+  boilerplate();
+  cmd_append(&cmd, "-lX11");
   cmd_append(&cmd, "-lGLX");
-  cmd_append(&cmd, "-lGLU");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  compilefile("src/wx11.c", "build/wx11.o");
+  #else
+  boilerplate();
+  /* TODO: Go back to using cocoa... someday...
+  cmd_append(&cmd, "-framework", "Cocoa");
+  cmd_append(&cmd, "-framework", "OpenGL");
+  compilefile("src/wcocoa.c", "build/wcocoa.o");
+  */
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-L/opt/X11/lib");
+  cmd_append(&cmd, "-lX11");
+  compilefile("src/wquartz.c", "build/wquartz.o");
+  #endif
+
+  boilerplate();
+  #ifdef __linux__
+  cmd_append(&cmd, "-lX11");
+  cmd_append(&cmd, "-lGLX");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  #elif defined(__APPLE__)
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-L/opt/X11/lib");
+  cmd_append(&cmd, "-lX11");
+  #endif 
+  compilefile("src/gfxsw.c", "build/gfxsw.o");
+  
+  boilerplate();
+  #ifdef __APPLE__
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
+  #elifdef __linux__
+  cmd_append(&cmd, "-lGL");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  cmd_append(&cmd, "-lGLX");
+  #endif
   compilefile("src/gfxgl.c", "build/gfxgl.o");
 
   boilerplate();
-  compilefile("src/event.c", "build/event.o");
-
-  boilerplate();
-  compilefile("src/gpplayer.c", "build/gpplayer.o");
-
-  boilerplate();
-  compilefile("src/gpchar.c", "build/gpchar.o");
-
-  boilerplate();
+  #ifdef __APPLE__
+  cmd_append(&cmd, "-I/opt/X11/include");
+  cmd_append(&cmd, "-DGL_SILENCE_DEPRECATION");
+  cmd_append(&cmd, "-framework", "OpenGL");
+  #elif defined(__linux__)
+  cmd_append(&cmd, "-lX11");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
   cmd_append(&cmd, "-lGL");
-  cmd_append(&cmd, "-lGLX");
+  #endif
   compilefile("src/gfxobj.c", "build/gfxobj.o");
 
   boilerplate();
-  cmd_append(&cmd, "-lGL");
-  cmd_append(&cmd, "-lGLX");
-  compilefile("src/gfxterrain.c", "build/gfxterrain.o");
-
-#if defined(__linux__)
+  compilefile("src/game.c", "build/game.o");
   boilerplate();
-  cmd_append(&cmd, "-lX11");
-  compilefile("src/linmain.c", "build/linmain.o");
+  compilefile("src/main.c", "build/main.o");
+  boilerplate();
+  compilefile("src/event.c", "build/event.o");
+#if defined(__linux__) 
+  boilerplate();
+  cmd_append(&cmd, "-lpthread");
+  cmd_append(&cmd, "-D_GNU_SOURCE");
+  compilefile("src/sfxalsa.c", "build/sfxalsa.o");
+#elif defined(__APPLE__)
+  boilerplate();
+  cmd_append(&cmd, "-framework", "AudioToolbox", "-framework", "AudioUnit",
+      "-framework", "CoreAudio");
+  cmd_append(&cmd, "-lpthread");
+  cmd_append(&cmd, "-I/opt/homebrew/include/");
+  compilefile("src/sfxca.c", "build/sfxca.o");
 #endif
+
+  boilerplate();
+  compilefile("src/vm.c", "build/vm.o");
+
+  boilerplate();
+  compilefile("src/scc.c", "build/scc.o");
 
 #if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
-    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lGLU", "-lasound", "-lmpg123", "-lpthread",
-    "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
-    "build/gfxterrain.o", "build/linmain.o"
-    );
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lasound", "-lmpg123", "-lpthread",
+    "build/main.o", "build/gfxgl.o", "build/game.o", "build/gfx.o", "build/event.o", "build/sfxalsa.o",
+    "build/gfxobj.o", "build/wx11.o", "build/vm.o");
+	if (!cmd_run(&cmd)) { return 1; }
+  cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scc", "build/scc.o");
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)
   /* TODO: Fix wcocoa & opengl on mac

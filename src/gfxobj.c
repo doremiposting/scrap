@@ -12,15 +12,33 @@ saferead(FILE *f, char *buf, int sz) {
 }
 
 static void
-objcnt(FILE *f, int *vc, int *vtc, int *vnc, int *fc) {
+parsef(const char *st, int *i) {
+  char *s;
+  unsigned int n;
+  n = 0;
+  s = strtok(st+2, " \t\n");
+  if (s) {
+    do {
+      n++;
+      s = strtok(NULL, " \t\n");
+    } while (s);
+  }
+  if (n >= 3) { *i += (3 * (n-2)); }
+}
+
+static void
+objcnt(FILE *f, int *vc, int *vtc, int *vnc, int *fc, unsigned int *idxc) {
   char line[LINEWIDTH];
-  *vc = *vtc = *vnc = *fc = 0;
+  *vc = *vtc = *vnc = *fc = *idxc = 0;
 
   while (saferead(f, line, sizeof(line))) {
          if (!(strncmp(line, "v ",  2))) { (*vc)++; }
     else if (!(strncmp(line, "vt ", 3))) { (*vtc)++; }
     else if (!(strncmp(line, "vn ", 3))) { (*vnc)++; }
-    else if (!(strncmp(line, "f ",  2))) { (*fc)++; }
+    else if (!(strncmp(line, "f ",  2))) {
+      (*fc)++;
+      parsef(line, idxc);
+    }
   }
 
   rewind(f);
@@ -41,6 +59,7 @@ parsevtx(const char *s, int *vi, int *ti, int *ni) {
 Mesh *
 loadobj(const char *fn) {
   FILE *f;
+  unsigned int idxc, idxi, idxbase;
   int i, vc, vtc, vnc, fc, pi, ti, ni, oi;
   int tvi[3], tti[3], tni[3];
   int v0[3], vprev[3], vcurr[3];
@@ -49,19 +68,21 @@ loadobj(const char *fn) {
   Vec2f *uv, t;
   Vertex *out, *v;
   Mesh *m;
+  unsigned int *idx;
   char *s;
   size_t outcap;
   f = fopen(fn, "r");
   if (!f) { return NULL; }
 
-  objcnt(f, &vc, &vtc, &vnc, &fc);
+  objcnt(f, &vc, &vtc, &vnc, &fc, &idxc);
   pos = calloc((size_t)(vc), sizeof(Vec3f));
   norm = calloc((size_t)(vnc), sizeof(Vec3f));
   uv = calloc((size_t)(vtc), sizeof(Vec2f));
+  idx = calloc((size_t)(idxc), sizeof(unsigned int));
 
   outcap = (size_t)(3*fc);
   out = calloc(outcap, sizeof(Vertex));
-  pi = ni = ti = oi = 0;
+  pi = ni = ti = oi = idxi = 0;
 
   while (saferead(f, line, sizeof(line))) {
     if (!(strncmp(line, "v ", 2))) {
@@ -101,6 +122,9 @@ loadobj(const char *fn) {
         tvi[0] = v0[0]; tvi[1] = vprev[0]; tvi[2] = vcurr[0];
         tti[0] = v0[1]; tti[1] = vprev[1]; tti[2] = vcurr[1];
         tni[0] = v0[2]; tni[1] = vprev[2]; tni[2] = vcurr[2];
+        /* TODO: Index deduplication */
+        idxbase = (unsigned int)oi;
+        idx[idxi] = idxbase; idx[idxi+1] = idxbase+1; idx[idxi+2] = idxbase+2;
         for (i = 0; i < 3; i++) {
        		v = &out[oi++];
           p = pos[tvi[i] - 1];
@@ -119,6 +143,7 @@ loadobj(const char *fn) {
 				vprev[0] = vcurr[0];
 				vprev[1] = vcurr[1];
 				vprev[2] = vcurr[2];
+        idxi += 3;
         s = strtok(NULL, " \t\n");
       }
     }
@@ -132,6 +157,8 @@ loadobj(const char *fn) {
   m = calloc(1, sizeof(Mesh));
   m->v = out;
   m->cnt = (unsigned int)(oi);
+  m->idx = idx;
+  m->idxc = idxc;
   return m;
 }
 
