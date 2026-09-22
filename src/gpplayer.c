@@ -5,6 +5,7 @@
 /* TODO: This will need to be a md3 later on for animation support... */
 #include "gfxobj.h"
 #include "gpchar.h"
+#include "gfxterrain.h"
 
 #include "gpplayer.h"
 /* TODO: If we ever have multiplayer support, this will need to be an array of... */
@@ -19,6 +20,8 @@ playerbuildup(const char *meshfp) {
   P->id = 0;
   /* TODO: This will need to be a md3 later on for animation support... */
   P->m = loadobj(meshfp);
+  P->foot = meshfootoffset(P->m);
+  P->mv = PLAYER_STANDING;
   /* TODO: When this fails to load, 0 gets passed to drawm and then segfault.
    * We need a way to fail loudly... */
   P->view = buildupcam(0, 3, 5, 0, 0, 0, CAMERA_FREECAM);
@@ -45,6 +48,18 @@ void
 playermovealong(float dx, float dy, float dz) {
   P->x += dx; P->y += dy; P->z += dz;
 }
+void playerheight(float y) { P->y = y; }
+void
+playerclamptoterrain() {
+  int trix, triz;
+  float ground;
+  trix = (int)floorf(P->x); triz = (int)floorf(P->z);
+  ground = tvfield[(triz+TERRAIN_HEIGHT)*TERRAIN_STRIDE
+      + (trix+TERRAIN_WIDTH)].y;
+  if (P->y - P->foot < ground) {
+    P->y = ground + P->foot; P->dy = 0;
+  } else { P->dy -= 0.5; }
+}
 void
 playerintegrate(float dt, float ax, float ay, float az) {
   float speed, scale, damp;
@@ -58,6 +73,7 @@ playerintegrate(float dt, float ax, float ay, float az) {
   P->x += P->dx * dt; P->y += P->dy * dt; P->z += P->dz * dt;
   damp = fmaxf(0, 1-FRICTION*dt);
   P->dx *= damp; P->dy *= damp; P->dz *= damp;
+  playerclamptoterrain();
 }
 void
 playerrot2(float p, float y, float r) {
@@ -66,6 +82,10 @@ playerrot2(float p, float y, float r) {
 void
 playerrotalong(float dp, float dy, float dr) {
   P->pitch += dp; P->yaw += dy; P->roll += dr;
+}
+float
+terrainfloor(float x, float z) {
+
 }
 void
 projectcamera() {

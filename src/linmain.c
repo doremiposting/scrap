@@ -228,7 +228,7 @@ main(int argc, char *argv[]) {
       nowft = DIFFNS(thenr, nowr); nowfps = (1000000000.0 /((double)(nowft)));
       if (bestfps < nowfps) { bestfps = nowfps; }
       if (worstfps > nowfps) { worstfps = nowfps; }
-      fprintf(stderr, "\rFR: %.2f FPS (best: %.2f, worst %.2f), FT: %lld ns", nowfps, bestfps, worstfps, nowft);
+      fprintf(stderr, "\rPy: %.2f, FR: %.2f FPS (best: %.2f, worst %.2f), FT: %lld ns", P->y, nowfps, bestfps, worstfps, nowft);
     }
   }
   killevtbl();

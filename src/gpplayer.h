@@ -6,6 +6,7 @@
 #include "gfxobj.h"
 
 typedef enum { CAMERA_FOLLOW, CAMERA_FP, CAMERA_FREECAM, CAMERA_END } Cameramode;
+typedef enum { PLAYER_STANDING, PLAYER_JUMPING, PLAYER_END } Playermvmt;
 typedef struct Camerastruct {
   Cameramode cm;
   float x, y, z;
@@ -19,6 +20,8 @@ typedef struct Playerstruct {
   float x, y, z;
   float dx, dy, dz;
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
+  float foot;
+  Playermvmt mv;
 } Player;
 extern Player *P;
 #define CDX(P) (P->view->x - P->x)
@@ -31,6 +34,8 @@ void playermove2(float x, float y, float z);
 void playermovealong(float dx, float dy, float dz); 
 void playerrot2(float p, float y, float r);
 void playerrotalong(float dp, float dy, float dr);
+void playerheight(float y);
+void playerclamptoterrain();
 void projectcamera();
 float projectorg();
 void playerintegrate(float dt, float ax, float ay, float az);

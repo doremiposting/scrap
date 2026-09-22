@@ -21,6 +21,8 @@ extern unsigned int *triia;
 #endif
 extern size_t triiacnt;
 
+float terrainheight(int x, int y);
+float terrainheightf(float x, float y);
 void terrbuildup();
 void terrteardown();
 

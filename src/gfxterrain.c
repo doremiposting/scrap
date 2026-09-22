@@ -24,6 +24,10 @@ float
 terrainheight(int x, int y) {
   return (sin(x*0.1) * cos(y*0.1));
 }
+float
+terrainheightf(float x, float y) {
+  return (sinf(x*0.1) * cosf(y*0.1));
+}
 
 TV *
 newtvfield() {

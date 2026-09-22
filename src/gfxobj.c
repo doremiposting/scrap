@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 
 #include "gfxobj.h"
 
@@ -54,6 +55,17 @@ parsevtx(const char *s, int *vi, int *ti, int *ni) {
   if (sscanf(s, "%d/%d", vi, ti) == 2) { return 2; }
   if (sscanf(s, "%d", vi) == 1) { return 1; }
   return 0;
+}
+
+float
+meshfootoffset(Mesh *m) {
+  float miny;
+  size_t i;
+  miny = FLT_MAX;
+  for (i = 0; i < m->cnt ; i++) {
+    if (m->v[i].y < miny) { miny = m->v[i].y; }
+  }
+  return -miny;
 }
 
 Mesh *
