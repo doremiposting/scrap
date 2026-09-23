@@ -53,13 +53,22 @@ void
 playerclamptoterrain() {
   int trix, triz;
   float ground;
+  static float gfactor = 0.0f;
   trix = (int)floorf(P->x); triz = (int)floorf(P->z);
   ground = tvfield[(triz+TERRAIN_HEIGHT)*TERRAIN_STRIDE
       + (trix+TERRAIN_WIDTH)].y;
   if (P->y - P->foot < ground) {
     P->y = ground + P->foot; P->dy = 0;
     P->mv = PLAYER_STANDING;
-  } else { P->dy -= 0.5; }
+    gfactor = 0.0f;
+  } else {
+    if (P->dy <= 0) {
+      gfactor += 0.1f;
+      P->dy -= 0.5f * gfactor; 
+    } else {
+      P->dy -= 0.5f;
+    }
+  }
 }
 void
 playerintegrate(float dt, float ax, float ay, float az) {
