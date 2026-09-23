@@ -104,11 +104,13 @@ main(int argc, char *argv[]) {
   const float physdtf = (float)(1.0 / 120.0);
   GLuint state;
   int omx, mx, omy, my;
+  int syncyaw;
   omx = mx = omy = my = 0;
   state = 0;
   doexit = 0;
   physat = 0;
   bestfps = 0.0; worstfps = DBL_MAX; nowft = 0; nowfps = 0.0;
+  syncyaw = 0;
   x11init();
   buildevtbl();
   glreshape(WWIDTH, WHEIGHT);
@@ -127,8 +129,13 @@ main(int argc, char *argv[]) {
             case 'i':
               wiremesh = !wiremesh;
               break;
-            case 'p':
             case XK_space:
+              if (P->mv != PLAYER_JUMPING) {
+                P->mv = PLAYER_JUMPING;
+                P->dy = 20.0f;
+              }
+              break;
+            case 'p':
               animate = !animate;
               break;
             case 'q':
@@ -137,7 +144,10 @@ main(int argc, char *argv[]) {
               break;
             case 'c':
               if (P->view->cm == CAMERA_FOLLOW) { P->view->cm = CAMERA_FREECAM; }
-              else if (P->view->cm == CAMERA_FREECAM) { P->view->cm = CAMERA_FOLLOW; }
+              else if (P->view->cm == CAMERA_FREECAM) {
+                P->view->cm = CAMERA_FOLLOW;
+                syncyaw = 0;
+              }
               break;
             case 'w':
               setevent(W_HELD, 1);
@@ -191,6 +201,10 @@ main(int argc, char *argv[]) {
             if (P->view->cm == CAMERA_FREECAM) { update(state, omx, mx, omy, my); }
             else if (P->view->cm == CAMERA_FOLLOW) {
               if (state & ROTATE) {
+                if (!syncyaw) {
+                  P->yaw = M_PI - P->view->yaw;
+                  syncyaw = 1;
+                }
                 P->view->yaw += (mx-omx) * 0.01f; 
                 P->yaw -= (mx-omx) * 0.01f;
                 P->view->pitch += (my-omy) * 0.005f;
@@ -198,8 +212,13 @@ main(int argc, char *argv[]) {
               if (state & PAN) {
                 P->view->yaw += (mx-omx) * 0.01f; 
                 P->view->pitch += (my-omy) * 0.005f;
+                syncyaw = 0;
               }
             }
+            if (P->yaw > M_PI*2) { P->yaw -= (float)(M_PI*2); }
+            if (P->yaw < -M_PI*2) { P->yaw += (float)(M_PI*2); }
+            if (P->view->yaw > M_PI*2) { P->view->yaw -= (float)(M_PI*2); }
+            if (P->view->yaw < -M_PI*2) { P->view->yaw += (float)(M_PI*2); }
             break;
           case ClientMessage: {
             if ((Atom) ev.xclient.data.l[0] == wmdelwin) { doexit = 1; }
@@ -228,7 +247,7 @@ main(int argc, char *argv[]) {
       nowft = DIFFNS(thenr, nowr); nowfps = (1000000000.0 /((double)(nowft)));
       if (bestfps < nowfps) { bestfps = nowfps; }
       if (worstfps > nowfps) { worstfps = nowfps; }
-      fprintf(stderr, "\rPy: %.2f, FR: %.2f FPS (best: %.2f, worst %.2f), FT: %lld ns", P->y, nowfps, bestfps, worstfps, nowft);
+      fprintf(stderr, "\rPy: %.2f Cy: %.2f, FR: %.2f FPS (best: %.2f, worst %.2f), FT: %lld ns", P->yaw, P->view->yaw, nowfps, bestfps, worstfps, nowft);
     }
   }
   killevtbl();

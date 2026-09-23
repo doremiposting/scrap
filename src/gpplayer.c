@@ -58,6 +58,7 @@ playerclamptoterrain() {
       + (trix+TERRAIN_WIDTH)].y;
   if (P->y - P->foot < ground) {
     P->y = ground + P->foot; P->dy = 0;
+    P->mv = PLAYER_STANDING;
   } else { P->dy -= 0.5; }
 }
 void
@@ -72,7 +73,7 @@ playerintegrate(float dt, float ax, float ay, float az) {
   }
   P->x += P->dx * dt; P->y += P->dy * dt; P->z += P->dz * dt;
   damp = fmaxf(0, 1-FRICTION*dt);
-  P->dx *= damp; P->dy *= damp; P->dz *= damp;
+  P->dx *= damp; P->dz *= damp;
   playerclamptoterrain();
 }
 void
