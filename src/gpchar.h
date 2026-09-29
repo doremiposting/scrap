@@ -2,11 +2,13 @@
 #define GPCHAR_H
 
 #include "gfxobj.h"
+#include "gpcoll.h"
 
 typedef struct Visibleentity {
   Mesh *m;
   float x, y, z;
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
+  Collshape shape;
 } Visent;
 
 Visent *newntt(const char *meshfp);

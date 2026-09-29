@@ -4,6 +4,7 @@
 #include "gpchar.h"
 /* TODO: This will need to be a md3 later on for animation support... */
 #include "gfxobj.h"
+#include "gpcoll.h"
 
 typedef enum { CAMERA_FOLLOW, CAMERA_FP, CAMERA_FREECAM, CAMERA_END } Cameramode;
 typedef enum { PLAYER_STANDING, PLAYER_JUMPING, PLAYER_END } Playermvmt;
@@ -22,6 +23,7 @@ typedef struct Playerstruct {
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
   float foot;
   Playermvmt mv;
+  Collshape shape;
 } Player;
 extern Player *P;
 #define CDX(P) (P->view->x - P->x)

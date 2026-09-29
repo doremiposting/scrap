@@ -44,6 +44,10 @@ glinit() {
   terrbuildup();
   box = newnttfrommesh(buildabox(1.0f, 1.0f, 1.0f));
   nttmove2(box, 2.0, 1.3f, 0.0f);
+  box->shape.kind = SHAPE_AABB;
+  box->shape.aabb.hx = 1.0f;
+  box->shape.aabb.hy = 1.0f;
+  box->shape.aabb.hz = 1.0f;
 }
 
 void

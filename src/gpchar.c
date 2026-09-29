@@ -11,6 +11,7 @@ newntt(const char *meshfp) {
   v->m = loadobj(meshfp);
   v->x = v->y = v->z = 0;
   v->pitch = v->yaw = v->roll = 0;
+  v->shape.kind = SHAPE_NONE;
   return v;
 }
 
@@ -21,6 +22,7 @@ newnttfrommesh(Mesh *m) {
   v->m = m;
   v->x = v->y = v->z = 0;
   v->pitch = v->yaw = v->roll = 0;
+  v->shape.kind = SHAPE_NONE;
   return v;
 }
 

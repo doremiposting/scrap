@@ -28,6 +28,14 @@ playerbuildup(const char *meshfp) {
   /* P->x = P->y = P->z = 0; */
   P->x = P->z = 0; P->y = 3;
   P->pitch = P->yaw = P->pitch = 0;
+  /* XXX: Placeholder AABB, remove me later */
+  P->shape.kind = SHAPE_AABB;
+  P->shape.aabb.hx = 0.4f;
+  P->shape.aabb.hy = 0.9f;
+  P->shape.aabb.hz = 0.4f;
+  P->shape.offx = 0.0f;
+  P->shape.offy = P->shape.aabb.hy - P->foot;
+  P->shape.offz = 0.0f;
   return P->id;
 }
 void
