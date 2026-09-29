@@ -84,6 +84,7 @@ playerintegrate(float dt, float ax, float ay, float az) {
   damp = fmaxf(0, 1-FRICTION*dt);
   P->dx *= damp; P->dz *= damp;
   playerclamptoterrain();
+  /* TODO: Collision handled here, eventually */
 }
 void
 playerrot2(float p, float y, float r) {

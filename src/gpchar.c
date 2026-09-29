@@ -9,8 +9,18 @@ newntt(const char *meshfp) {
   Visent *v;
   v = calloc(1, sizeof(Visent));
   v->m = loadobj(meshfp);
-  v->posx = v->posy = v->posz = 0;
-  v->rotp = v->roty = v->rotr = 0;
+  v->x = v->y = v->z = 0;
+  v->pitch = v->yaw = v->roll = 0;
+  return v;
+}
+
+Visent *
+newnttfrommesh(Mesh *m) {
+  Visent *v;
+  v = calloc(1, sizeof(Visent));
+  v->m = m;
+  v->x = v->y = v->z = 0;
+  v->pitch = v->yaw = v->roll = 0;
   return v;
 }
 
@@ -22,20 +32,20 @@ killntt(Visent *v) {
 
 void
 nttmove2(Visent *v, float x, float y, float z) {
-  v->posx = x; v->posy = y; v->posz = z;
+  v->x = x; v->y = y; v->z = z;
 }
 
 void
 nttmovealong(Visent *v, float dx, float dy, float dz) {
-  v->posx += dx; v->posy += dy; v->posz += dz;
+  v->x += dx; v->y += dy; v->z += dz;
 }
 
 void
 nttrot2(Visent *v, float p, float y, float r) {
-  v->rotp = p; v->roty = y; v->rotr = r;
+  v->pitch = p; v->yaw = y; v->roll = r;
 }
 
 void
 nttrotalong(Visent *v, float dp, float dy, float dr) {
-  v->rotp += dp; v->roty += dy; v->rotr += dr;
+  v->pitch += dp; v->yaw += dy; v->roll += dr;
 }

@@ -41,11 +41,6 @@ setevent(Scrapevent e, char v) {
 void
 handlephysics(double dt) {
   playerintegrate(dt, accel[0], accel[1], accel[2]);
-  /*
-  fprintf(stderr, "\rAccels: X:%.2f, Z:%.2f; Angle: %s mode, C:%.2f, P:%.2f, d:%.2f", accel[AXIS_X], accel[AXIS_Z],
-    (P->view->cm == CAMERA_FOLLOW) ? "Follow" : "Free",
-    P->view->yaw, P->yaw, (P->yaw - P->view->yaw));
-  */
   accel[0] = accel[1] = accel[2] = 0;
 }
 

@@ -3,11 +3,13 @@
 #include <GL/glu.h>
 #include "gfxgl.h"
 #include "gfxobj.h"
+#include "gfxprim.h"
 #include "gfxterrain.h"
 #include "gpchar.h"
 #include "gpplayer.h"
 
 Mesh *tp;
+Visent *box;
 int wiremesh;
 int animate;
 
@@ -40,11 +42,14 @@ glinit() {
   playerbuildup("assets/pill.obj");
   playermove2(3, 3, 3);
   terrbuildup();
+  box = newnttfrommesh(buildabox(1.0f, 1.0f, 1.0f));
+  nttmove2(box, 2.0, 1.3f, 0.0f);
 }
 
 void
 glkill() {
   terrteardown();
+  killntt(box);
   playerteardown(P->id);
   killmesh(tp);
 }
@@ -115,6 +120,17 @@ render() {
     glColor3f(0,0,0);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawmesh(P->m);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+  glPopMatrix();
+  glPushMatrix();
+  glColor3f(0.8f, 0.4f, 0.2f);
+  glTranslatef(box->x, box->y, box->z);
+  drawmesh(box->m);
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawmesh(box->m);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
   glPopMatrix();

@@ -5,11 +5,12 @@
 
 typedef struct Visibleentity {
   Mesh *m;
-  float posx, posy, posz;
-  float rotp, /* up-down */ roty, /* lateral side-to-side */ rotr; /* circular rotation */
+  float x, y, z;
+  float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
 } Visent;
 
 Visent *newntt(const char *meshfp);
+Visent *newnttfrommesh(Mesh *m);
 void killntt(Visent *v);
 void nttmove2(Visent *v, float x, float y, float z);
 void nttmovealong(Visent *v, float dx, float dy, float dz); 

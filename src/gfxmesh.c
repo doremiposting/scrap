@@ -4,7 +4,6 @@
 #include <float.h>
 
 #include "gfxmesh.h"
-#include "gfxobj.h"
 
 #define LINEWIDTH 512
 

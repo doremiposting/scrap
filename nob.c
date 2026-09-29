@@ -63,6 +63,9 @@ main(int argc, char *argv[]) {
   compilefile("src/gpchar.c", "build/gpchar.o");
 
   boilerplate();
+  compilefile("src/gfxprim.c", "build/gfxprim.o");
+
+  boilerplate();
   cmd_append(&cmd, "-lGL");
   cmd_append(&cmd, "-lGLX");
   compilefile("src/gfxobj.c", "build/gfxobj.o");
@@ -82,7 +85,7 @@ main(int argc, char *argv[]) {
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lGLU", "-lasound", "-lmpg123", "-lpthread",
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
-    "build/gfxterrain.o", "build/linmain.o"
+    "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)
