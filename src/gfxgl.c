@@ -48,11 +48,13 @@ glinit() {
   box->shape.aabb.hx = 1.0f;
   box->shape.aabb.hy = 1.0f;
   box->shape.aabb.hz = 1.0f;
+  regstatic(box);
 }
 
 void
 glkill() {
   terrteardown();
+  unregstatic(box);
   killntt(box);
   playerteardown(P->id);
   killmesh(tp);

@@ -12,6 +12,7 @@
 #include "gfxgl.h"
 #include "event.h"
 #include "gpplayer.h"
+#include "gpchar.h"
 
 #define UNUSED(x) (void)(x)
 #define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -111,6 +112,7 @@ main(int argc, char *argv[]) {
   physat = 0;
   bestfps = 0.0; worstfps = DBL_MAX; nowft = 0; nowfps = 0.0;
   syncyaw = 0;
+  staticsinit();
   x11init();
   buildevtbl();
   glreshape(WWIDTH, WHEIGHT);

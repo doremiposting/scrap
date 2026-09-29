@@ -4,6 +4,14 @@
 
 #include "gpchar.h"
 
+Visent *staticentities[MAX_STATICS];
+int staticnttcnt;
+
+void
+staticsinit() {
+  staticnttcnt = 0;
+}
+
 Visent *
 newntt(const char *meshfp) {
   Visent *v;
@@ -50,4 +58,22 @@ nttrot2(Visent *v, float p, float y, float r) {
 void
 nttrotalong(Visent *v, float dp, float dy, float dr) {
   v->pitch += dp; v->yaw += dy; v->roll += dr;
+}
+
+int
+regstatic(Visent *v) {
+  if (staticnttcnt >= MAX_STATICS) { return 0; }
+  staticentities[staticnttcnt++] = v;
+  return 1;
+}
+
+void
+unregstatic(Visent *v) {
+  int i;
+  for (i = 0; i < staticnttcnt; i++) {
+    if (staticentities[i] == v) {
+      staticentities[i] = staticentities[--staticnttcnt];
+      return;
+    }
+  }
 }
