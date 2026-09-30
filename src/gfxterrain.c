@@ -152,6 +152,41 @@ buildtvfts() {
   }
 }
 
+/* NOTE: Returns 0 if (x,z) is outside the mesh. */
+/* NOTE: Splits here must match buildia() in winding. */
+int
+terrainheightat(float x, float z, float *h) {
+  int cx, cz, base;
+  float fx, fz, h00, h10, h01, h11;
+
+  fx = x / TERRAIN_SPACING; fz = z / TERRAIN_SPACING;
+  cx = (int)floorf(fx); cz = (int)floorf(fz);
+  if (cx < -TERRAIN_WIDTH || cx > TERRAIN_WIDTH-2) { return 0; }
+  if (cz < -TERRAIN_HEIGHT || cz > TERRAIN_HEIGHT-2) { return 0; }
+  fx -= (float)cx; fz -= (float)cz;
+  base = (cz + TERRAIN_HEIGHT) * TERRAIN_STRIDE + (cx + TERRAIN_WIDTH);
+  h00 = tvfield[base].y;
+  h10 = tvfield[base+1].y;
+  h01 = tvfield[base + TERRAIN_STRIDE].y;
+  h11 = tvfield[base + TERRAIN_STRIDE+1].y;
+  if (fx + fz <= 1.0f) {
+    *h = h00 + fx*(h10-h00) + fz*(h01-h00);
+  } else {
+    *h = h11 + (1.0f-fx)*(h01-h11) + (1.0f-fz)*(h10-h11);
+  }
+  return 1;
+}
+
+int
+terrainpushout(float x, float feety, float z, float *pushy) {
+  float ground;
+
+  if (!terrainheightat(x, z, &ground)) { return 0; }
+  if (feety >= ground) { return 0; }
+  *pushy = ground - feety;
+  return 1;
+}
+
 void
 terrbuildup() {
   tvfield = newtvfield();

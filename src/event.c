@@ -5,7 +5,6 @@
 #include "event.h"
 #include "gpchar.h"
 #include "gpplayer.h"
-#include "gpcoll.h"
 
 char *evtable;
 typedef enum {
@@ -41,27 +40,11 @@ setevent(Scrapevent e, char v) {
 
 void
 handlephysics(double dt) {
-  int i;
+  int i, j, hit;
   float px, py, pz, sx, sy, sz, pushx, pushy, pushz;
   playerintegrate(dt, accel[0], accel[1], accel[2]);
   accel[0] = accel[1] = accel[2] = 0;
-  if (P->shape.kind == SHAPE_AABB) {
-    px = P->x + P->shape.offx;
-    py = P->y + P->shape.offy;
-    pz = P->z + P->shape.offz;
-    for (i = 0; i < staticnttcnt; i++) {
-      if (staticentities[i]->shape.kind != SHAPE_AABB) { continue; }
-      sx = staticentities[i]->x + staticentities[i]->shape.offx;
-      sy = staticentities[i]->y + staticentities[i]->shape.offy;
-      sz = staticentities[i]->z + staticentities[i]->shape.offz;
-      if (aabbcomp(px, py, pz, &P->shape.aabb,
-            sx, sy, sz, &staticentities[i]->shape.aabb,
-            &pushx, &pushy, &pushz)) {
-        P->x += pushx; P->y += pushy; P->z += pushz;
-        if (pushy > 0.0f) { P->dy = 0; }
-      }
-    }
-  }
+  playercollide();
 }
 
 void

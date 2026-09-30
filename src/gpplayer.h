@@ -22,6 +22,7 @@ typedef struct Playerstruct {
   float dx, dy, dz;
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
   float foot;
+  float fallacc;
   Playermvmt mv;
   Collshape shape;
 } Player;
@@ -37,7 +38,7 @@ void playermovealong(float dx, float dy, float dz);
 void playerrot2(float p, float y, float r);
 void playerrotalong(float dp, float dy, float dr);
 void playerheight(float y);
-void playerclamptoterrain();
+void playercollide();
 void projectcamera();
 float projectorg();
 void playerintegrate(float dt, float ax, float ay, float az);

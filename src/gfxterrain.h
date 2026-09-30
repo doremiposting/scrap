@@ -23,6 +23,8 @@ extern size_t triiacnt;
 
 float terrainheight(int x, int y);
 float terrainheightf(float x, float y);
+int terrainheightat(float x, float z, float *h);
+int terrainpushout(float x, float feety, float z, float *pushy);
 void terrbuildup();
 void terrteardown();
 

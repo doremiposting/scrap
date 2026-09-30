@@ -57,25 +57,49 @@ playermovealong(float dx, float dy, float dz) {
   P->x += dx; P->y += dy; P->z += dz;
 }
 void playerheight(float y) { P->y = y; }
+#define MAXCOLLPASSES 4
+static void
+applypush(float pushx, float pushy, float pushz) {
+  P->x += pushx; P->y += pushy; P->z += pushz;
+  if (pushx != 0.0f) { P->dx = 0; }
+  if (pushz != 0.0f) { P->dz = 0; }
+  if (pushy > 0.0f && P->dy <= 0.0f) {
+    /* Pushed up while falling or resting */
+    P->dy = 0; P->fallacc = 0.0f; P->mv = PLAYER_STANDING;
+  } else if (pushy < 0.0f && P->dy > 0.0f) {
+    /* Bonked a ceiling, protects against hanging against it... */
+    P->dy = 0;
+  }
+}
 void
-playerclamptoterrain() {
-  int trix, triz;
-  float ground;
-  static float gfactor = 0.0f;
-  trix = (int)floorf(P->x); triz = (int)floorf(P->z);
-  ground = tvfield[(triz+TERRAIN_HEIGHT)*TERRAIN_STRIDE
-      + (trix+TERRAIN_WIDTH)].y;
-  if (P->y - P->foot < ground) {
-    P->y = ground + P->foot; P->dy = 0;
-    P->mv = PLAYER_STANDING;
-    gfactor = 0.0f;
-  } else {
-    if (P->dy <= 0) {
-      gfactor += 0.1f;
-      P->dy -= 0.5f * gfactor; 
-    } else {
-      P->dy -= 0.5f;
+playercollide() {
+  int i, j, hit;
+  float px, py, pz, sx, sy, sz, pushx, pushy, pushz;
+  
+  for (j = 0; j < MAXCOLLPASSES; j++) {
+    hit = 0;
+    if (P->shape.kind == SHAPE_AABB) {
+      for (i = 0; i < staticnttcnt; i++) {
+        if (staticentities[i]->shape.kind != SHAPE_AABB) { continue; }
+        px = P->x + P->shape.offx;
+        py = P->y + P->shape.offy;
+        pz = P->z + P->shape.offz;
+        sx = staticentities[i]->x + staticentities[i]->shape.offx;
+        sy = staticentities[i]->y + staticentities[i]->shape.offy;
+        sz = staticentities[i]->z + staticentities[i]->shape.offz;
+        if (aabbcomp(px, py, pz, &P->shape.aabb,
+              sx, sy, sz, &staticentities[i]->shape.aabb,
+              &pushx, &pushy, &pushz)) {
+          applypush(pushx, pushy, pushz);
+          hit = 1;
+        }
+      }
     }
+    if (terrainpushout(P->x, P->y - P->foot, P->z, &pushy)) {
+      applypush(0.0f, pushy, 0.0f);
+      hit = 1;
+    }
+    if (!hit) { break; }
   }
 }
 void
@@ -91,8 +115,12 @@ playerintegrate(float dt, float ax, float ay, float az) {
   P->x += P->dx * dt; P->y += P->dy * dt; P->z += P->dz * dt;
   damp = fmaxf(0, 1-FRICTION*dt);
   P->dx *= damp; P->dz *= damp;
-  playerclamptoterrain();
-  /* TODO: Collision handled here, eventually */
+  if (P->dy <= 0.0f) {
+    P->fallacc += 0.1f;
+    P->dy -= 0.5f * P->fallacc;
+  } else {
+    P->dy -= 0.5f;
+  }
 }
 void
 playerrot2(float p, float y, float r) {
