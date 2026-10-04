@@ -12,6 +12,7 @@ Mesh *tp;
 Visent *box;
 int wiremesh;
 int animate;
+int showcoll;
 
 #define updateclamp(x) do {x = x > (2*M_PI) ? x - (2*M_PI) : x < (-2*M_PI) ? x += (-2*M_PI) : x;} while (0)
 void
@@ -83,6 +84,60 @@ drawterrain() {
   glVertexPointer(3, GL_FLOAT, sizeof(TV), tvfield);
   glDrawElements(GL_TRIANGLES, triiacnt, GL_UNSIGNED_INT, triia);
   glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+static void
+drawaabb(float cx, float cy, float cz, float hx, float hy, float hz) {
+  float x0, x1, y0, y1, z0, z1;
+  x0 = cx-hx; x1 = cx+hx;
+  y0 = cy-hy; y1 = cy+hy;
+  z0 = cz-hz; z1 = cz+hz;
+  glBegin(GL_LINE_LOOP);
+    glVertex3f(x0, y0, z0); glVertex3f(x1, y0, z0);
+    glVertex3f(x1, y0, z1); glVertex3f(x0, y0, z1);
+  glEnd();
+  glBegin(GL_LINE_LOOP);
+    glVertex3f(x0, y1, z0); glVertex3f(x1, y1, z0);
+    glVertex3f(x1, y1, z1); glVertex3f(x0, y1, z1);
+  glEnd();
+  glBegin(GL_LINES);
+    glVertex3f(x0, y0, z0); glVertex3f(x1, y0, z0);
+    glVertex3f(x1, y0, z0); glVertex3f(x1, y1, z0);
+    glVertex3f(x1, y0, z1); glVertex3f(x1, y1, z1);
+    glVertex3f(x0, y0, z1); glVertex3f(x0, y1, z1);
+  glEnd();
+}
+
+static void
+drawcollview() {
+  int i;
+  float fx, fy, fz;
+  glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
+  glDisable(GL_DEPTH_TEST);
+  if (P->shape.kind == SHAPE_AABB) {
+    glColor3f(0.0f, 1.0f, 0.0f);
+    drawaabb(P->x + P->shape.offx, P->y + P->shape.offy,
+        P->z + P->shape.offz,
+        P->shape.aabb.hx, P->shape.aabb.hy, P->shape.aabb.hz);
+  }
+  glColor3f(1.0f, 1.0f, 0.0f);
+  for (i = 0; i < staticnttcnt; i++) {
+    if (staticentities[i]->shape.kind != SHAPE_AABB) { continue; }
+    drawaabb(staticentities[i]->x + staticentities[i]->shape.offx,
+      staticentities[i]->y + staticentities[i]->shape.offy,
+      staticentities[i]->z + staticentities[i]->shape.offz,
+      staticentities[i]->shape.aabb.hx,
+      staticentities[i]->shape.aabb.hy,
+      staticentities[i]->shape.aabb.hz);
+  }
+  fx = P->x; fy = P->y - P->foot; fx = P->z;
+  glColor3f(1.0f, 1.0f, 1.0f);
+  glBegin(GL_LINES);
+    glVertex3f(fx-0.3f, fy, fz); glVertex3f(fx+0.3f, fy, fz);
+    glVertex3f(fx, fy-0.3f, fz); glVertex3f(fx, fy+0.3f, fz);
+    glVertex3f(fx, fy, fz-0.3f); glVertex3f(fx, fy, fz+0.3f);
+  glEnd();
+  glPopAttrib();
 }
 
 void
@@ -180,6 +235,7 @@ render() {
   glEnd();
   glEnable(GL_CULL_FACE);
   glPopMatrix();
+  if (showcoll) { drawcollview(); }
   glPopMatrix();
   if (animate) {
     spin += dspin;

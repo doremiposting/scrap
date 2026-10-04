@@ -79,6 +79,7 @@ x11init() {
     glGetString(GL_RENDERER), glGetString(GL_VERSION));
   animate = 1;
   wiremesh = 1;
+  showcoll = 0;
   perfstat = 1;
   glinit();
   GETNS(tthen); GETNS(tnow); GETNS(thenr); GETNS(nowr); GETNS(frmst); GETNS(frmend);
@@ -139,6 +140,9 @@ main(int argc, char *argv[]) {
               break;
             case 'p':
               animate = !animate;
+              break;
+            case 'v':
+              showcoll = !showcoll;
               break;
             case 'q':
             case XK_Escape:

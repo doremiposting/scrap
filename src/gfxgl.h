@@ -8,6 +8,7 @@ enum {
 };
 extern int wiremesh;
 extern int animate;
+extern int showcoll;
 extern float ctl[3];
 extern float crt[2];
 void update(int state, int ox, int nx, int oy, int ny);
