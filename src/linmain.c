@@ -107,6 +107,7 @@ main(int argc, char *argv[]) {
   GLuint state;
   int omx, mx, omy, my;
   int syncyaw;
+  scrw = WWIDTH; scrh = WHEIGHT;
   omx = mx = omy = my = 0;
   state = 0;
   doexit = 0;

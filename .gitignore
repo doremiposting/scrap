@@ -1,6 +1,8 @@
 nob
 nob.old
+nob.old.c
 scrap*
 build/*.o
+assets/*.ttf
 *.swp
 .DS_Store

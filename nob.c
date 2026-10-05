@@ -17,6 +17,7 @@
 #endif
 
 Cmd cmd = {0};
+int release;
 
 static forceinline
 int
@@ -36,7 +37,7 @@ static forceinline
 int
 compilefile(const char *fn, const char *out) {
   cmd_append(&cmd,
-		"-std=c2y", "-g", "-c", "-o", out, fn
+		"-std=c2y", release ? "" : "-g", "-c", "-o", out, fn
   );
 	if (!cmd_run(&cmd)) { return 1; }
 }
@@ -44,6 +45,8 @@ compilefile(const char *fn, const char *out) {
 int
 main(int argc, char *argv[]) {
 	GO_REBUILD_URSELF(argc, argv); 
+
+  release = 0;
 
   if (!mkdir_if_not_exists("./build/")) { return 1; }
 
@@ -66,6 +69,10 @@ main(int argc, char *argv[]) {
   compilefile("src/gfxprim.c", "build/gfxprim.o");
 
   boilerplate();
+  cmd_append(&cmd, "-Icontrib/stb");
+  compilefile("src/gfxttf.c", "build/gfxttf.o");
+
+  boilerplate();
   compilefile("src/gpcoll.c", "build/gpcoll.o");
 
   boilerplate();
@@ -86,9 +93,11 @@ main(int argc, char *argv[]) {
 
 #if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
-    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lGLU", "-lasound", "-lmpg123", "-lpthread",
+    "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lGLU",
+   /* "-lasound", "-lmpg123", "-lpthread", */
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
-    "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o"
+    "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o",
+    "build/gfxttf.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)

@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "gfxgl.h"
@@ -13,6 +14,8 @@ Visent *box;
 int wiremesh;
 int animate;
 int showcoll;
+int scrw, scrh;
+TTFAtlas hudfont;
 
 #define updateclamp(x) do {x = x > (2*M_PI) ? x - (2*M_PI) : x < (-2*M_PI) ? x += (-2*M_PI) : x;} while (0)
 void
@@ -50,11 +53,15 @@ glinit() {
   box->shape.aabb.hy = 1.0f;
   box->shape.aabb.hz = 1.0f;
   regstatic(box);
+  if (ttfbuildatlas(&hudfont, "assets/lib.ttf", 24.0f)) {
+    fprintf(stderr, "glinit: filed to build HUD font atlas\n");
+  }
 }
 
 void
 glkill() {
   terrteardown();
+  ttffreeatlas(&hudfont);
   unregstatic(box);
   killntt(box);
   playerteardown(P->id);
@@ -63,6 +70,7 @@ glkill() {
 
 void
 glreshape(int width, int height) {
+  scrw = width; scrh = height;
   glViewport(0, 0, width, height);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -130,13 +138,54 @@ drawcollview() {
       staticentities[i]->shape.aabb.hy,
       staticentities[i]->shape.aabb.hz);
   }
-  fx = P->x; fy = P->y - P->foot; fx = P->z;
+  fx = P->x; fy = P->y - P->foot; fz = P->z;
   glColor3f(1.0f, 1.0f, 1.0f);
   glBegin(GL_LINES);
     glVertex3f(fx-0.3f, fy, fz); glVertex3f(fx+0.3f, fy, fz);
     glVertex3f(fx, fy-0.3f, fz); glVertex3f(fx, fy+0.3f, fz);
     glVertex3f(fx, fy, fz-0.3f); glVertex3f(fx, fy, fz+0.3f);
   glEnd();
+  glPopAttrib();
+}
+
+static inline void
+drawtxtwshadow(const TTFAtlas *a, float x, float y, const char *s) {
+  glColor3f(0.0, 0.0f, 0.0f);
+  ttfdrawtxt(a, x, y, s);
+  glColor3f(1.0f, 1.0f, 1.0f);
+  ttfdrawtxt(a, x+1, y+1, s);
+}
+
+static inline void
+colortxtwshadow(const TTFAtlas *a, float x, float y, const char *s,
+    float r, float g, float b) {
+  glColor3f(0.0, 0.0f, 0.0f);
+  ttfdrawtxt(a, x, y, s);
+  glColor3f(r, g, b);
+  ttfdrawtxt(a, x+1, y+1, s);
+}
+
+static void
+drawhud() {
+  char buf[64];
+  glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
+  glDisable(GL_CULL_FACE);
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+  glOrtho(0, scrw, scrh, 0, -1, 1);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  glDisable(GL_DEPTH_TEST);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  snprintf(buf, sizeof(buf), "collision view: %s", showcoll ? "ON" : "OFF");
+  drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
+  glEnable(GL_DEPTH_TEST);
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();
   glPopAttrib();
 }
 
@@ -237,6 +286,7 @@ render() {
   glPopMatrix();
   if (showcoll) { drawcollview(); }
   glPopMatrix();
+  drawhud();
   if (animate) {
     spin += dspin;
     tpcx += (tpdx * (float)tpmx);
