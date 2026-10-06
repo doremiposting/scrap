@@ -17,6 +17,9 @@ int showcoll;
 int scrw, scrh;
 TTFAtlas hudfont;
 
+#define GIZMOPX 96
+#define GIZMOMGN 10
+
 #define updateclamp(x) do {x = x > (2*M_PI) ? x - (2*M_PI) : x < (-2*M_PI) ? x += (-2*M_PI) : x;} while (0)
 void
 update(int state, int ox, int nx, int oy, int ny) {
@@ -166,6 +169,39 @@ colortxtwshadow(const TTFAtlas *a, float x, float y, const char *s,
 }
 
 static void
+drawgizmo() {
+  GLint vp[4];
+  int gx, gy;
+  glGetIntegerv(GL_VIEWPORT, vp);
+  gx = scrw - GIZMOPX - GIZMOMGN;
+  gy = scrh - GIZMOPX - GIZMOMGN;
+  glViewport(gx, gy, GIZMOPX, GIZMOPX);
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+  glOrtho(-1.2, 1.2, -1.2, 1.2, -2.0, 2.0);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  glRotatef(P->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->roll * (180/M_PI), 0.0f, 0.0f, 1.0f);
+  glBegin(GL_LINES);
+    glColor3f(1,0,0);
+    glVertex3f(0,0,0); glVertex3f(1,0,0);
+    glColor3f(0,1,0);
+    glVertex3f(0,0,0); glVertex3f(0,1,0);
+    glColor3f(0,0,1);
+    glVertex3f(0,0,0); glVertex3f(0,0,1);
+  glEnd();
+  glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+}
+
+static void
 drawhud() {
   char buf[64];
   glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
@@ -181,6 +217,7 @@ drawhud() {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   snprintf(buf, sizeof(buf), "collision view: %s", showcoll ? "ON" : "OFF");
   drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
+  drawgizmo();
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_MODELVIEW);
   glPopMatrix();
@@ -271,18 +308,6 @@ render() {
     drawmesh(tp);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
-  glPopMatrix();
-  glPushMatrix();
-  glDisable(GL_CULL_FACE);
-  glBegin(GL_LINES);
-    glColor3f(1,0,0);
-    glVertex3f(0,0,-0.001f); glVertex3f(10,0,-0.002f);
-    glColor3f(0,1,0);
-    glVertex3f(0,0,-0.001f); glVertex3f(0,10,-0.002f);
-    glColor3f(0,0,1);
-    glVertex3f(0,0,-0.001f); glVertex3f(0,0,10);
-  glEnd();
-  glEnable(GL_CULL_FACE);
   glPopMatrix();
   if (showcoll) { drawcollview(); }
   glPopMatrix();
