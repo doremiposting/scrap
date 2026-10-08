@@ -14,7 +14,7 @@ saferead(FILE *f, char *buf, int sz) {
 }
 
 static void
-parsef(const char *st, int *i) {
+parsef(char *st, unsigned int *i) {
   char *s;
   unsigned int n;
   n = 0;
@@ -31,7 +31,7 @@ parsef(const char *st, int *i) {
 static void
 objcnt(FILE *f, int *vc, int *vtc, int *vnc, int *fc, unsigned int *idxc) {
   char line[LINEWIDTH];
-  *vc = *vtc = *vnc = *fc = *idxc = 0;
+  *vc = 0; *vtc = 0; *vnc = 0; *fc = 0; *idxc = 0;
 
   while (saferead(f, line, sizeof(line))) {
          if (!(strncmp(line, "v ",  2))) { (*vc)++; }
@@ -95,7 +95,7 @@ loadobj(const char *fn) {
 
   outcap = (size_t)(3*fc);
   out = calloc(outcap, sizeof(Vertex));
-  pi = ni = ti = oi = idxi = 0;
+  pi = 0; ni = 0; ti = 0; oi = 0; idxi = 0;
 
   while (saferead(f, line, sizeof(line))) {
     if (!(strncmp(line, "v ", 2))) {

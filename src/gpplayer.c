@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "main.h"
+
 /* TODO: This will need to be a md3 later on for animation support... */
 #include "gfxobj.h"
 #include "gpchar.h"
@@ -27,7 +29,7 @@ playerbuildup(const char *meshfp) {
   P->view = buildupcam(0, 3, 5, 0, 0, 0, CAMERA_FREECAM);
   /* P->x = P->y = P->z = 0; */
   P->x = P->z = 0; P->y = 3;
-  P->pitch = P->yaw = P->pitch = 0;
+  P->pitch = 0; P->yaw = 0; P->pitch = 0;
   /* XXX: Placeholder AABB, remove me later */
   P->shape.kind = SHAPE_AABB;
   P->shape.aabb.hx = 0.4f;
@@ -107,7 +109,7 @@ playerintegrate(float dt, float ax, float ay, float az) {
   float speed, scale, damp;
   const float MAX = 280.0f, FRICTION = 10.0f;
   P->dx += ax; P->dy += ay; P->dz += az;
-  speed = sqrt(P->dx*P->dx + P->dy*P->dy + P->dz*P->dz);
+  speed = sqrtf(P->dx*P->dx + P->dy*P->dy + P->dz*P->dz);
   if (speed > MAX) {
     scale = MAX / speed;
     P->dx *= scale; P->dy *= scale; P->dz *= scale;
@@ -131,22 +133,8 @@ playerrotalong(float dp, float dy, float dr) {
   P->pitch += dp; P->yaw += dy; P->roll += dr;
 }
 float
-terrainfloor(float x, float z) {
-
-}
-void
-projectcamera() {
-  
-}
-float
 projectorg() {
   return atan2f(P->z, P->x);
-}
-static void 
-nmlzcmraproj(float ndx, float ndz) {
-  float h;
-  h = sqrtf(CDX(P)*CDX(P) + CDZ(P)*CDZ(P));
-  ndx = CDZ(P) / h; ndz = CDZ(P) / h;
 }
 Camera *
 buildupcam(float x, float y, float z, float p, float yaw, float r, Cameramode cm) {
@@ -176,11 +164,11 @@ camlookat(Camera *c, float x, float y, float z) {
 }
 void
 orbitcam(Camera *c, float dth, float r) {
+  UNUSED(c);
   P->view->yaw += dth;
   P->view->x = P->x + cosf(P->view->yaw) * r;
   P->view->y = P->y + 3.0f;
   P->view->z = P->z + sinf(P->view->yaw) * r;
-  projectcamera();
   camlookat(P->view, P->x, P->y, P->z);
 }
 void

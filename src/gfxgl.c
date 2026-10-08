@@ -20,22 +20,26 @@ TTFAtlas hudfont;
 #define GIZMOPX 96
 #define GIZMOMGN 10
 
-#define updateclamp(x) do {x = x > (2*M_PI) ? x - (2*M_PI) : x < (-2*M_PI) ? x += (-2*M_PI) : x;} while (0)
+#define updateclamp(x) \
+  do { \
+    if (x > (float)(2*M_PI)) { x -= (float)(2*M_PI); } \
+    else if (x < (float)(-2*M_PI)) { x += (float)(2*M_PI); } \
+  } while (0)
 void
 update(int state, int ox, int nx, int oy, int ny) {
   int dx, dy;
   dx = ox-nx; dy = ny-oy;
   switch (state) {
     case PAN:
-      P->view->x -= dx / 100.0f; P->view->y -= dy / 100.0f;
+      P->view->x -= (float)dx / 100.0f; P->view->y -= (float)dy / 100.0f;
       break;
     case ROTATE:
-      P->view->pitch += (dy * 180.0f) / 50000.0f;
-      P->view->yaw -= (dx * 180.0f) / 50000.0f;
+      P->view->pitch += ((float)dy * 180.0f) / 50000.0f;
+      P->view->yaw -= ((float)dx * 180.0f) / 50000.0f;
       updateclamp(P->view->pitch); updateclamp(P->view->yaw);
       break;
     case ZOOM:
-      P->view->z -= (dx + dy) / 1000.0f;
+      P->view->z -= (float)(dx + dy) / 1000.0f;
       break;
   }
 }
@@ -85,7 +89,7 @@ void
 drawmesh(const Mesh *m) {
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(Vertex), m->v);
-  glDrawElements(GL_TRIANGLES, m->idxc, GL_UNSIGNED_INT, m->idx);
+  glDrawElements(GL_TRIANGLES, (int)m->idxc, GL_UNSIGNED_INT, m->idx);
   glDisableClientState(GL_VERTEX_ARRAY);
 }
 
@@ -93,7 +97,7 @@ void
 drawterrain() {
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(TV), tvfield);
-  glDrawElements(GL_TRIANGLES, triiacnt, GL_UNSIGNED_INT, triia);
+  glDrawElements(GL_TRIANGLES, (int)triiacnt, GL_UNSIGNED_INT, triia);
   glDisableClientState(GL_VERTEX_ARRAY);
 }
 
@@ -183,9 +187,9 @@ drawgizmo() {
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
   glLoadIdentity();
-  glRotatef(P->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
-  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
-  glRotatef(P->roll * (180/M_PI), 0.0f, 0.0f, 1.0f);
+  glRotatef(P->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->roll * (float)(180/M_PI), 0.0f, 0.0f, 1.0f);
   glBegin(GL_LINES);
     glColor3f(1,0,0);
     glVertex3f(0,0,0); glVertex3f(1,0,0);
@@ -244,8 +248,8 @@ render() {
   /* XXX: This one's for managing scale a little */
   /* glTranslatef(0.0f, 0.0f, -12.0f); */
   glPushMatrix();
-  glRotatef(P->view->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
-  glRotatef(P->view->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->view->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->view->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
   glTranslatef(-P->view->x, -P->view->y, -P->view->z);
   glColor3f(0, 1, 1);
   drawterrain();
@@ -259,9 +263,9 @@ render() {
   glColor3f(0.85f,1,0.85f);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glTranslatef(P->x, P->y, P->z);
-  glRotatef(P->pitch * (180/M_PI), 1.0f, 0.0f, 0.0f);
-  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
-  glRotatef(P->roll * (180/M_PI), 0.0f, 0.0f, 1.0f);
+  glRotatef(P->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
+  glRotatef(P->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->roll * (float)(180/M_PI), 0.0f, 0.0f, 1.0f);
   drawmesh(P->m);
   if (wiremesh) {
     glColor3f(0,0,0);
@@ -284,7 +288,7 @@ render() {
   /* XXX: Front face indicator, remove me later. */
   glPushMatrix();
   glTranslatef(P->x, P->y, P->z);
-  glRotatef(P->yaw * (180/M_PI), 0.0f, 1.0f, 0.0f);
+  glRotatef(P->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
   glDisable(GL_CULL_FACE);
   glColor3f(1.0f, 0.0f, 0.0f);
   glBegin(GL_LINES);

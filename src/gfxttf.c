@@ -47,7 +47,7 @@ ttfbuildatlas(TTFAtlas *a, const char *path, float pxheight) {
   fp = fopen(path, "rb");
   if (!fp) { return -1; }
   fseek(fp, 0, SEEK_END); flen = ftell(fp); rewind(fp);
-  fbuf = calloc(flen, sizeof(char));
+  fbuf = calloc((size_t)flen, sizeof(char));
   if (!fbuf || fread(fbuf, 1, (size_t)flen, fp) != (size_t)flen * sizeof(char)) {
     fclose(fp); free(fbuf); return -1; 
   }
@@ -96,9 +96,9 @@ ttfbuildatlas(TTFAtlas *a, const char *path, float pxheight) {
 
   a->texw = ATLASW; a->texh = ATLASH;
   a->pxheight = pxheight;
-  a->ascent = ascent * scale;
-  a->descent = descent * scale;
-  a->linegap = linegap * scale;
+  a->ascent = (float)ascent * scale;
+  a->descent = (float)descent * scale;
+  a->linegap = (float)linegap * scale;
   a->chardata = cd;
 
   free(fbuf); free(bitmap);
