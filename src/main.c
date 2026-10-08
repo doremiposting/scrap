@@ -9,8 +9,11 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <stdio.h>
-#include "gfxgl14.h"
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include "gfxgl.h"
 #include "gpplayer.h"
+#include "gpchar.h"
 #include "event.h"
 
 HPALETTE hpalette;
@@ -18,6 +21,7 @@ HPALETTE hpalette;
  * FUCK YOU Bill Gates! */
 LARGE_INTEGER now, thenf, freq;
 double dt, physat;
+int perfstat;
 
 LONG WINAPI WindowProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam);
 HWND createoglwin(char *title, int x, int y, int width, int height, BYTE type, DWORD flags);
@@ -30,6 +34,9 @@ WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, LPSTR pcmdline, int ncmdsh
   MSG msg;
   RECT r;
   int doquit;
+  LARGE_INTEGER thenr, nowr;
+  long long nowft;
+  double bestfps, worstfps, nowfps;
   const float physdt = 1.0 / 120.0;
   (void)hinstance; (void)hprevinstance; (void)pcmdline;
 
@@ -48,6 +55,7 @@ WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, LPSTR pcmdline, int ncmdsh
   ShowWindow(hwnd, ncmdshow);
   physat = 0;
   doquit = 0;
+  bestfps = 0.0; worstfps = DBL_MAX; nowft = 0; nowfps = 0.0;
   while (!doquit) {
     /* XXX: Use NULL instead of hwnd (for some reason) if you want events to resolve. */
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -65,8 +73,18 @@ WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, LPSTR pcmdline, int ncmdsh
         physat -= physdt;
       }
       handleglobalevents(dt);
+      if (perfstat) { QueryPerformanceCOunter(&thenr); }
       render();
-      SwapBuffers(wglGetCurrentDC());
+      SwapBUffers(wglGetCurrentDC());
+      if (perfstat) {
+        QueryPerformanceCounter(&nowr);
+        nowft = (long long)((nowr.QuadPart - thenr.QuadPart) * 1000000000LL / freq.QuadPart);
+        nowfps = 1000000000.0 / (double)nowft;
+        if (bestfps < nowfps) { bestfps = nowfps; }
+        if (worstfps > nowfps) { worstfps = nowfps; }
+        fprintf(stderr, "\rFR: %.2f FPS (best: %.2f, worst %.2f), FT: %lld ns",
+          nowfps, bestfps, worstfps, nowft);
+      }
     }
   }
   killevtbl();
@@ -76,6 +94,8 @@ WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, LPSTR pcmdline, int ncmdsh
   wglDeleteContext(hrc);
   DestroyWindow(hwnd);
   if (hpalette) { DeleteObject(hpalette); }
+  fprintf(stderr, "\rDone.                                                        \n");
+  fprintf(stderr, "Framerates: best: %.2f, worst: %.2f\n", bestfps, worstfps);
   return msg.wParam;
 }
 
@@ -85,6 +105,7 @@ WindowProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam) {
   static int mbl = 0;
   static int mbr = 0;
   static GLuint state = 0;
+  static int syncyaw = 0;
   static int omx, omy, mx, my;
   switch (umsg) {
     case WM_KEYDOWN:
@@ -94,7 +115,15 @@ WindowProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam) {
           PostQuitMessage(0);
           break;
         case VK_SPACE:
+          if (P->mv != PLAYER_JUMPING) {
+            P->mv = PLAYER_JUMPING;
+            P->dy = 20.0f;
+          }
+        case 'P':
           animate = !animate;
+          break;
+        case 'V':
+          showcoll = !showcoll;
           break;
         case 'W':
           setevent(W_HELD, 1);
@@ -113,11 +142,14 @@ WindowProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam) {
           break;
         case 'L':
           camlookat(P->view, P->posx, P->posy, P->posz);
-          fprintf(stderr, "Yaw: %f Pitch: %f\n", P->view->roty, P->view->rotp);
+          fprintf(stderr, "Yaw: %f Pitch: %f\n", P->view->yaw, P->view->pitch);
           break;
         case 'C':
-          if (P->view->cm == CAMERA_FREECAM) { P->view->cm = CAMERA_FOLLOW; }
-          else if (P->view->cm == CAMERA_FOLLOW) { P->view->cm = CAMERA_FREECAM; }
+          if (P->view->cm == CAMERA_FOLLOW) { P->view->cm = CAMERA_FREECAM; }
+          else if (P->view->cm == CAMERA_FREECAM) {
+            P->view->cm = CAMERA_FOLLOW;
+            syncyaw = 0;
+          }
           break;
       }
       return 0;
@@ -158,12 +190,28 @@ WindowProc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam) {
       if (state) {
         omx = mx; omy = my;
         mx = GET_X_LPARAM(lparam); my = GET_Y_LPARAM(lparam);
-        if (P->view->cm == CAMERA_FREECAM) { update(state, omx, mx, omy, my); }
-        else if (P->view->cm == CAMERA_FOLLOW) {
-          if (state == ROTATE) {
-            P->dyaw += (mx - omx) * 0.01f; /* TODO: Sensitivity variable */
+        if (P->view->cm == CAMERA_FREECAM) {
+          update((int)state, omx, mx, omy, my);
+        } else if (P->view->cm == CAMERA_FOLLOW) {
+          if (state & ROTATE) {
+            if (!syncyaw) {
+              P->yaw = (float)M_PI - P->view->yaw;
+              syncyaw = 1;
+            }
+            P->view->yaw += (float)(mx - omx) * 0.01f;
+            P->yaw -= (float)(mx - omx) * 0.01f;
+            P->view->pitch += (float)(my - omy) * 0.005f;
+          }
+          if (state & PAN) {
+            P->view->yaw += (float)(mx - omx) * 0.01f;
+            P->view->pitch += (float)(my - omy) * 0.01f;
+            syncyaw = 0;
           }
         }
+        if (P->yaw > M_PI*2) { P->yaw -= (float)(M_PI*2); }
+        if (P->yaw < -M_PI*2) { P->yaw += (float)(M_PI*2); }
+        if (P->view->yaw > M_PI*2) { P->view->yaw -= (float)(M_PI*2); }
+        if (P->view->yaw < -M_PI*2) { P->view->yaw += (float)(M_PI*2); }
       }
       return 0;
       break;
@@ -196,6 +244,8 @@ createoglwin(char *title, int x, int y, int width, int height, BYTE type, DWORD 
   static HINSTANCE hinstance = 0;
   animate = 1;
   wiremesh = 0;
+  showcoll = 0;
+  perfstat = 1;
 
   /* Only refister once, using hinstance as a flag */
   if (!hinstance) {

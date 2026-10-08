@@ -37,7 +37,7 @@ static forceinline
 int
 compilefile(const char *fn, const char *out) {
   cmd_append(&cmd,
-		"-std=c2y", release ? "" : "-g", "-c", "-o", out, fn
+		"-std=c2y", release ? "-O2" : "-g", "-c", "-o", out, fn
   );
 	if (!cmd_run(&cmd)) { return 1; }
 }

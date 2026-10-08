@@ -107,6 +107,7 @@ main(int argc, char *argv[]) {
   GLuint state;
   int omx, mx, omy, my;
   int syncyaw;
+  UNUSED(argc); UNUSED(argv);
   scrw = WWIDTH; scrh = WHEIGHT;
   omx = mx = omy = my = 0;
   state = 0;
@@ -198,27 +199,27 @@ main(int argc, char *argv[]) {
             );
             break;
           case ButtonRelease:
-            if (ev.xbutton.button == Button1) { state &= ~PAN; }
-            if (ev.xbutton.button == Button3) { state &= ~ROTATE; }
+            if (ev.xbutton.button == Button1) { state &= (GLuint)(~PAN); }
+            if (ev.xbutton.button == Button3) { state &= (GLuint)(~ROTATE); }
             if (!state) { XUngrabPointer(display, CurrentTime); }
             break;
           case MotionNotify:
             omx = mx; omy = my;
             mx = ev.xmotion.x; my = ev.xmotion.y;
-            if (P->view->cm == CAMERA_FREECAM) { update(state, omx, mx, omy, my); }
+            if (P->view->cm == CAMERA_FREECAM) { update((int)state, omx, mx, omy, my); }
             else if (P->view->cm == CAMERA_FOLLOW) {
               if (state & ROTATE) {
                 if (!syncyaw) {
-                  P->yaw = M_PI - P->view->yaw;
+                  P->yaw = (float)M_PI - P->view->yaw;
                   syncyaw = 1;
                 }
-                P->view->yaw += (mx-omx) * 0.01f; 
-                P->yaw -= (mx-omx) * 0.01f;
-                P->view->pitch += (my-omy) * 0.005f;
+                P->view->yaw += (float)(mx-omx) * 0.01f; 
+                P->yaw -= (float)(mx-omx) * 0.01f;
+                P->view->pitch += (float)(my-omy) * 0.005f;
               }
               if (state & PAN) {
-                P->view->yaw += (mx-omx) * 0.01f; 
-                P->view->pitch += (my-omy) * 0.005f;
+                P->view->yaw += (float)(mx-omx) * 0.01f; 
+                P->view->pitch += (float)(my-omy) * 0.005f;
                 syncyaw = 0;
               }
             }
@@ -243,7 +244,7 @@ main(int argc, char *argv[]) {
       handlephysics(physdtf);
       physat -= physdt;
     }
-    dt = (double)((tnow.tv_sec - tthen.tv_sec) + (double)(tnow.tv_nsec - tthen.tv_nsec)/1000000000.0);
+    dt = (((double)tnow.tv_sec - (double)tthen.tv_sec) + ((double)tnow.tv_nsec - (double)tthen.tv_nsec)/1000000000.0);
     handleglobalevents(dt);
     GETNS(tthen);
     if (perfstat) { GETNS(thenr); }

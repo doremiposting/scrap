@@ -22,17 +22,17 @@ TVFT *ttris;
 
 float
 terrainheight(int x, int y) {
-  return (sin(x*0.1) * cos(y*0.1));
+  return (sinf((float)x*0.1f) * cosf((float)y*0.1f));
 }
 float
 terrainheightf(float x, float y) {
-  return (sinf(x*0.1) * cosf(y*0.1));
+  return (sinf((float)x*0.1f) * cosf((float)y*0.1f));
 }
 
 TV *
 newtvfield() {
   TV *t;
-  t = calloc(4 * TERRAIN_WIDTH * TERRAIN_HEIGHT + 1, sizeof(TV));
+  t = calloc(4 * (size_t)TERRAIN_WIDTH * (size_t)TERRAIN_HEIGHT + 1, sizeof(TV));
   if (!t) { return NULL; }
   else { return t; }
 }
@@ -40,7 +40,7 @@ newtvfield() {
 unsigned int *
 newtvindexarray() {
   unsigned int *t;
-  t = calloc(6 * 4 * TERRAIN_WIDTH * TERRAIN_HEIGHT + 1, sizeof(unsigned int));
+  t = calloc(6 * 4 * (size_t)TERRAIN_WIDTH * (size_t)TERRAIN_HEIGHT + 1, sizeof(unsigned int));
   if (!t) { return NULL; }
   else { return t; }
 }
@@ -55,8 +55,8 @@ buildtvs() {
     for (j = -TERRAIN_WIDTH; j < TERRAIN_WIDTH; j++) {
       /* XXX: Don't forget that Z is not up,
        * no matter how much your instincts fight you... */
-      tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].x = j*TERRAIN_SPACING;
-      tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].z = i*TERRAIN_SPACING;
+      tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].x = (float)j*TERRAIN_SPACING;
+      tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].z = (float)i*TERRAIN_SPACING;
       tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].y = terrainheight(i, j);
     }
   }
@@ -65,7 +65,7 @@ buildtvs() {
 TVFT *
 newtriangles() {
   TVFT *t;
-  t = calloc(4 * 2 * TERRAIN_WIDTH * TERRAIN_HEIGHT + 1, sizeof(TVFT));
+  t = calloc(4 * 2 * (size_t)TERRAIN_WIDTH * (size_t)TERRAIN_HEIGHT + 1, sizeof(TVFT));
   if (!t) { return NULL; }
   else { return t;}
 }
@@ -95,12 +95,12 @@ buildia() {
     for (j = -TERRAIN_WIDTH; j < TERRAIN_WIDTH-1; j++) {
       k = (i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH);
       base = 6*k;
-      triia[base] = k+TERRAIN_STRIDE;
-      triia[base+1] = k+1;
-      triia[base+2] = k;
-      triia[base+3] = k+TERRAIN_STRIDE;
-      triia[base+4] = k+1+TERRAIN_STRIDE;
-      triia[base+5] = k+1;
+      triia[base] = (unsigned int)k+(unsigned int)TERRAIN_STRIDE;
+      triia[base+1] = (unsigned int)k+1;
+      triia[base+2] = (unsigned int)k;
+      triia[base+3] = (unsigned int)k+(unsigned int)TERRAIN_STRIDE;
+      triia[base+4] = (unsigned int)k+1+(unsigned int)TERRAIN_STRIDE;
+      triia[base+5] = (unsigned int)k+1;
       triiacnt += 6;
     }
   }
