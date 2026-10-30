@@ -5,6 +5,7 @@
 #include "event.h"
 #include "gpchar.h"
 #include "gpplayer.h"
+#include "gpinteractable.h"
 
 char *evtable;
 typedef enum {
@@ -36,6 +37,9 @@ killevtbl() {
 void
 setevent(Scrapevent e, char v) {
   evtable[e] = v;
+  if (v && (e == W_HELD || e == S_HELD || e == A_HELD || e == D_HELD)) {
+    ntrctcancel();
+  }
 }
 
 void
@@ -43,6 +47,7 @@ handlephysics(double dt) {
   playerintegrate((float)dt, accel[0], accel[1], accel[2]);
   accel[0] = accel[1] = accel[2] = 0;
   playercollide();
+  ntrctupdate(dt);
 }
 
 void

@@ -9,32 +9,39 @@
 #include "gpchar.h"
 #include "gfxterrain.h"
 
-TEMP
-#include "gfxgl.h"
-TEMP extern Visent *tree;
-
 #include "gpplayer.h"
 /* TODO: If we ever have multiplayer support, this will need to be an array of... */
 Player *P;
 
-TEMP
+/* TODO: placeholder xp curve */
+#define XPPERLEVEL 100u 
+#define MAXPLAYERLEVEL 99
+
+static
+unsigned char
+levelforxp(unsigned xp) {
+  unsigned lvl;
+  lvl = xp / XPPERLEVEL + 1;
+  if (lvl > MAXPLAYERLEVEL) { lvl = MAXPLAYERLEVEL; }
+  return (unsigned char)lvl;
+}
+
 void
-interacttree() {
-  float dx, dz, distsq, rx, rz, reach;
-  rx = tree->x + tree->shape.offx;
-  rz = tree->z + tree->shape.offz;
-  dx = P->x - rx;
-  dz = P->z - rz;
-  distsq = dx*dx + dz*dz;
-  reach = tree->shape.aabb.hx + TREEREACH;
-  if (distsq <= reach*reach) {
-    treectr++;
-    fprintf(stdout, "interacted with tree (%d)\n", treectr);
+playergivexp(Playerstatistics stat, unsigned amount) {
+  unsigned char newmax, delta;
+  P->S[stat] += amount;
+  newmax = levelforxp(P->S[stat]);
+  if (newmax > P->Ml[stat]) {
+    delta = (unsigned char)(newmax - P->Ml[stat]);
+    P->Ml[stat] = newmax;
+    P->Cl[stat] = (unsigned char)(P->Cl[stat] + delta);
+    fprintf(stdout, "stat %d leveled up to %d\n", stat, newmax);
   }
 }
 
 unsigned int
 playerbuildup(const char *meshfp) {
+  int i;
   /* TODO: If we ever have multiplayer support, this will need to be a
    * pointer to a new struct of. For now, just make a player with id 0
    * using the global *P */
@@ -58,6 +65,9 @@ playerbuildup(const char *meshfp) {
   P->shape.offx = 0.0f;
   P->shape.offy = P->shape.aabb.hy - P->foot;
   P->shape.offz = 0.0f;
+  for (i = 0; i < PLEVEL_END; i++) {
+    P->Cl[i] = P->Ml[i] = 1;
+  }
   return P->id;
 }
 void

@@ -14,6 +14,10 @@ typedef struct Camerastruct {
   float x, y, z;
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
 } Camera;
+typedef enum {
+  PLEVEL_BOTANY,
+  PLEVEL_END
+} Playerstatistics;
 typedef struct Playerstruct {
   unsigned int id;
 /* TODO: This will need to be a md3 later on for animation support... */
@@ -26,14 +30,13 @@ typedef struct Playerstruct {
   float fallacc;
   Playermvmt mv;
   Collshape shape;
+  unsigned S[PLEVEL_END];
+  unsigned char Cl[PLEVEL_END], Ml[PLEVEL_END];
 } Player;
 extern Player *P;
 #define CDX(P) (P->view->x - P->x)
 #define CDY(P) (P->view->y - P->y)
 #define CDZ(P) (P->view->z - P->z)
-
-TEMP void interacttree();
-
 unsigned int playerbuildup(const char *meshfp);
 void playerteardown(unsigned int id);
 void playermove2(float x, float y, float z);
@@ -45,6 +48,7 @@ void playercollide();
 void projectcamera();
 float projectorg();
 void playerintegrate(float dt, float ax, float ay, float az);
+void playergivexp(Playerstatistics stat, unsigned amount);
 Camera * buildupcam(float x, float y, float z, float p, float yaw, float r, Cameramode cm);
 void teardowncam(Camera *c);
 void cammove2(Camera *c, float x, float y, float z);

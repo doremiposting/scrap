@@ -8,11 +8,11 @@
 #include "gfxterrain.h"
 #include "gpchar.h"
 #include "gpplayer.h"
+#include "gpinteractable.h"
 
 Mesh *tp;
 Visent *box;
 Visent *tree;
-TEMP int treectr;
 int wiremesh;
 int animate;
 int showcoll;
@@ -21,6 +21,8 @@ TTFAtlas hudfont;
 
 #define GIZMOPX 96
 #define GIZMOMGN 10
+TEMP
+#define TREEXP 45
 
 #define updateclamp(x) \
   do { \
@@ -72,6 +74,7 @@ glinit() {
   tree->shape.offy = 2.0f;
   tree->shape.offz = 0.0f;
   regstatic(tree);
+  regntrct(tree, INTERACT_TREE, PLEVEL_BOTANY, TREEXP, 1.0f);
   if (ttfbuildatlas(&hudfont, "assets/lib.ttf", 24.0f)) {
     fprintf(stderr, "glinit: filed to build HUD font atlas\n");
   }
@@ -235,6 +238,8 @@ drawhud() {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   snprintf(buf, sizeof(buf), "collision view: %s", showcoll ? "ON" : "OFF");
   drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
+  snprintf(buf, sizeof(buf), "botany: Lv%u, Xp: %u", P->Cl[PLEVEL_BOTANY], P->S[PLEVEL_BOTANY]);
+  drawtxtwshadow(&hudfont, 10, 30+hudfont.ascent, buf);
   drawgizmo();
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_MODELVIEW);

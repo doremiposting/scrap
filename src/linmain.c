@@ -13,6 +13,7 @@
 #include "event.h"
 #include "gpplayer.h"
 #include "gpchar.h"
+#include "gpinteractable.h"
 
 #define UNUSED(x) (void)(x)
 #define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -115,6 +116,7 @@ main(int argc, char *argv[]) {
   physat = 0;
   bestfps = 0.0; worstfps = DBL_MAX; nowft = 0; nowfps = 0.0;
   syncyaw = 0;
+  srand((unsigned)time(NULL));
   staticsinit();
   x11init();
   buildevtbl();
@@ -138,6 +140,7 @@ main(int argc, char *argv[]) {
               if (P->mv != PLAYER_JUMPING) {
                 P->mv = PLAYER_JUMPING;
                 P->dy = 20.0f;
+                ntrctcancel();
               }
               break;
             case 'p':
@@ -170,7 +173,7 @@ main(int argc, char *argv[]) {
               setevent(D_HELD, 1);
               break;
             case 'e':
-              interacttree();
+              ntrcttoggle();
               break;
             }
             break;
