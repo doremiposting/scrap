@@ -5,6 +5,7 @@
 /* TODO: This will need to be a md3 later on for animation support... */
 #include "gfxobj.h"
 #include "gpcoll.h"
+#include "main.h"
 
 typedef enum { CAMERA_FOLLOW, CAMERA_FP, CAMERA_FREECAM, CAMERA_END } Cameramode;
 typedef enum { PLAYER_STANDING, PLAYER_JUMPING, PLAYER_END } Playermvmt;
@@ -30,6 +31,8 @@ extern Player *P;
 #define CDX(P) (P->view->x - P->x)
 #define CDY(P) (P->view->y - P->y)
 #define CDZ(P) (P->view->z - P->z)
+
+TEMP void interacttree();
 
 unsigned int playerbuildup(const char *meshfp);
 void playerteardown(unsigned int id);

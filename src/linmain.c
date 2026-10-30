@@ -169,6 +169,9 @@ main(int argc, char *argv[]) {
             case 'd':
               setevent(D_HELD, 1);
               break;
+            case 'e':
+              interacttree();
+              break;
             }
             break;
           case KeyRelease:

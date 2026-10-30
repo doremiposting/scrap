@@ -2,6 +2,11 @@
 #define GFXGL_H
 #include "gfxobj.h"
 #include "gfxttf.h"
+#include "main.h"
+
+TEMP
+#define TREEREACH 1.5f
+
 enum {
   PAN = 1,
   ROTATE,
@@ -11,6 +16,7 @@ extern int wiremesh;
 extern int animate;
 extern int showcoll;
 extern int scrw, scrh;
+TEMP extern int treectr;
 extern TTFAtlas hudfont;
 extern float ctl[3];
 extern float crt[2];

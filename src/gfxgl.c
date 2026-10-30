@@ -11,6 +11,8 @@
 
 Mesh *tp;
 Visent *box;
+Visent *tree;
+TEMP int treectr;
 int wiremesh;
 int animate;
 int showcoll;
@@ -60,6 +62,16 @@ glinit() {
   box->shape.aabb.hy = 1.0f;
   box->shape.aabb.hz = 1.0f;
   regstatic(box);
+  tree = newnttfrommesh(loadobj("assets/tree.obj"));
+  nttmove2(tree, -5.0f, 0.0f, -2.0f);
+  tree->shape.kind = SHAPE_AABB;
+  tree->shape.aabb.hx = 0.42f;
+  tree->shape.aabb.hy = 2.25f;
+  tree->shape.aabb.hz = 0.42f;
+  tree->shape.offx = 0.0f;
+  tree->shape.offy = 2.0f;
+  tree->shape.offz = 0.0f;
+  regstatic(tree);
   if (ttfbuildatlas(&hudfont, "assets/lib.ttf", 24.0f)) {
     fprintf(stderr, "glinit: filed to build HUD font atlas\n");
   }
@@ -69,6 +81,8 @@ void
 glkill() {
   terrteardown();
   ttffreeatlas(&hudfont);
+  unregstatic(tree);
+  killntt(tree);
   unregstatic(box);
   killntt(box);
   playerteardown(P->id);
@@ -282,6 +296,17 @@ render() {
     glColor3f(0,0,0);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawmesh(box->m);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+  glPopMatrix();
+  glPushMatrix();
+  glColor3f(0.45f, 0.3f, 0.15f);
+  glTranslatef(tree->x, tree->y, tree->z);
+  drawmesh(tree->m);
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawmesh(tree->m);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
   glPopMatrix();

@@ -9,9 +9,29 @@
 #include "gpchar.h"
 #include "gfxterrain.h"
 
+TEMP
+#include "gfxgl.h"
+TEMP extern Visent *tree;
+
 #include "gpplayer.h"
 /* TODO: If we ever have multiplayer support, this will need to be an array of... */
 Player *P;
+
+TEMP
+void
+interacttree() {
+  float dx, dz, distsq, rx, rz, reach;
+  rx = tree->x + tree->shape.offx;
+  rz = tree->z + tree->shape.offz;
+  dx = P->x - rx;
+  dz = P->z - rz;
+  distsq = dx*dx + dz*dz;
+  reach = tree->shape.aabb.hx + TREEREACH;
+  if (distsq <= reach*reach) {
+    treectr++;
+    fprintf(stdout, "interacted with tree (%d)\n", treectr);
+  }
+}
 
 unsigned int
 playerbuildup(const char *meshfp) {
