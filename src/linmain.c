@@ -14,6 +14,9 @@
 #include "gpplayer.h"
 #include "gpchar.h"
 #include "gpinteractable.h"
+#include "gpsave.h"
+
+#define SAVEFILE "save0.scr"
 
 #define UNUSED(x) (void)(x)
 #define GETNS(ts) (clock_gettime(CLOCK_MONOTONIC, &ts))
@@ -174,6 +177,16 @@ main(int argc, char *argv[]) {
               break;
             case 'e':
               ntrcttoggle();
+              break;
+            case XK_F5:
+              if (savegame(SAVEFILE)) {
+                fprintf(stderr, "saved to %s\n", SAVEFILE);
+              }
+              break;
+            case XK_F9:
+              if (loadgame(SAVEFILE)) {
+                fprintf(stderr, "loaded %s\n", SAVEFILE);
+              }
               break;
             }
             break;

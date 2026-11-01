@@ -66,6 +66,9 @@ main(int argc, char *argv[]) {
   compilefile("src/gpinteractable.c", "build/gpinteractable.o");
 
   boilerplate();
+  compilefile("src/gpsave.c", "build/gpsave.o");
+
+  boilerplate();
   compilefile("src/gpchar.c", "build/gpchar.o");
 
   boilerplate();
@@ -100,7 +103,7 @@ main(int argc, char *argv[]) {
    /* "-lasound", "-lmpg123", "-lpthread", */
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
     "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o",
-    "build/gfxttf.o", "build/gpinteractable.o"
+    "build/gfxttf.o", "build/gpinteractable.o", "build/gpsave.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)
