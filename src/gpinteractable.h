@@ -7,27 +7,34 @@
 
 typedef enum { INTERACT_TREE, INTERACT_END } Interactflvr;
 
-#define INTERACTREACH 2.0f
 #define MAXINTERACTABLES 32
 #define INTERACTCHANCE 0.35
 
+#define DEFNAMELEN 16
+#define DEFLABELLEN 32
+
+typedef struct {
+  char name[DEFNAMELEN];
+  char statname[DEFNAMELEN];
+  unsigned xpgain;
+  float tickinterval;
+  float reach;
+  char label[DEFLABELLEN];
+  char activelabel[DEFLABELLEN];
+  Playerstatistics stat;
+} Interactdef;
 typedef struct {
   Visent *ntt;
   Interactflvr type;
-  float reach;
-  float tickinterval;
   float tickaccum;
   int channeling;
-  Playerstatistics stat;
-  unsigned xpgain;
-  const char *label, *activelabel;
+  const Interactdef *def;
 } Interactable;
 
 int ntrctisactive();
 float ntrctprogress();
-void regntrct(Visent *ntt, Interactflvr type, Playerstatistics stat,
-    unsigned xpgain, const char *label, const char *activelabel,
-    float tickinterval);
+int loadinteractdefs(const char *fn);
+void regntrct(Visent *ntt, Interactflvr type);
 void ntrcttoggle();
 void ntrctcancel();
 void ntrctupdate(double dt);

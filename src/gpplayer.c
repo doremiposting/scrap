@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include "main.h"
 
@@ -16,6 +17,17 @@ Player *P;
 /* TODO: placeholder xp curve */
 #define XPPERLEVEL 100u 
 #define MAXPLAYERLEVEL 99
+
+static const char *statnames[PLEVEL_END] = { "botany" };
+
+int
+statfromname(const char *name) {
+  int i;
+  for (i = 0; i < PLEVEL_END; i++) {
+    if (!strcmp(statnames[i], name)) { return i; }
+  }
+  return -1;
+}
 
 static
 unsigned char

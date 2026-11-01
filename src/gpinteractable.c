@@ -1,12 +1,67 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
 
 #include "gpplayer.h"
+#include "gptable.h"
 #include "gpinteractable.h"
 
 static Interactable ntrcts[MAXINTERACTABLES];
 static int ntrctcnt;
 static int activeidx = -1;
+
+static const char *interactnames[INTERACT_END] = { "tree" };
+static const Fielddef interactdeffields[] = {
+  { "name", FIELD_STR, offsetof(Interactdef, name), DEFNAMELEN },
+  { "statname", FIELD_STR, offsetof(Interactdef, statname), DEFNAMELEN },
+  { "xpgain", FIELD_UINT, offsetof(Interactdef, xpgain), 0 },
+  { "tickinterval", FIELD_FLOAT, offsetof(Interactdef, tickinterval), 0 },
+  { "reach", FIELD_FLOAT, offsetof(Interactdef, reach), 0 },
+  { "label", FIELD_STR, offsetof(Interactdef, label), DEFLABELLEN },
+  { "activelabel", FIELD_STR, offsetof(Interactdef, activelabel), DEFLABELLEN },
+};
+static Interactdef interactdefs[INTERACT_END];
+static int ndefs;
+
+static const
+Interactdef *
+finddef(Interactflvr type) {
+  int i;
+  for (i = 0; i < ndefs; i++) {
+    if (!strcmp(interactdefs[i].name, interactnames[type])) {
+      return &interactdefs[i];
+    }
+  }
+  return NULL;
+}
+
+int
+loadinteractdefs(const char *fn) {
+  int i, statid;
+  ndefs = loadtable(fn, interactdeffields, FIELDCOUNT(interactdeffields),
+      interactdefs, sizeof(Interactdef), INTERACT_END);
+  if (ndefs < 0) { ndefs = 0; return 0; }
+  for (i = 0; i < ndefs; i++) {
+    statid = statfromname(interactdefs[i].statname);
+    if (statid < 0) {
+      fprintf(stderr, "%s: unknown stat '%s' for '%s'\n",
+          fn, interactdefs[i].statname, interactdefs[i].name);
+      ndefs = 0;
+      return 0;
+    }
+    interactdefs[i].stat = (Playerstatistics)statid;
+  }
+  for (i = 0; i < INTERACT_END; i++) {
+    if (!finddef((Interactflvr)i)) {
+      fprintf(stderr, "%s: missing definition for interactable '%s'\n",
+          fn, interactnames[i]);
+      ndefs = 0;
+      return 0;
+    }
+  }
+  return 1;
+}
 
 int
 ntrctisactive() {
@@ -16,27 +71,26 @@ ntrctisactive() {
 float
 ntrctprogress() {
   if (activeidx < 0) { return 0.0f; }
-  return ntrcts[activeidx].tickaccum / ntrcts[activeidx].tickinterval;
+  return ntrcts[activeidx].tickaccum / ntrcts[activeidx].def->tickinterval;
 }
 
 void
-regntrct(Visent *ntt, Interactflvr type, Playerstatistics stat, 
-    unsigned xpgain, const char *label, const char *activelabel,
-    float tickinterval) {
+regntrct(Visent *ntt, Interactflvr type) {
   Interactable *in;
+  const Interactdef *def;
   if (ntrctcnt >= MAXINTERACTABLES) {
     fprintf(stderr, "Couldn't register new interactable, maximum reached!\n");
     return;
   }
+  def = finddef(type);
+  if (!def) {
+    fprintf(stderr, "regntrct: no definition loaded for interactable type %d\n",
+        type);
+  }
   in = &ntrcts[ntrctcnt++];
   in->ntt = ntt;
   in->type = type;
-  in->reach = INTERACTREACH;
-  in->stat = stat;
-  in->xpgain = xpgain;
-  in->label = label;
-  in->activelabel = activelabel;
-  in->tickinterval = tickinterval;
+  in->def = def;
   in->tickaccum = 0.0f;
   in->channeling = 0;
 }
@@ -48,7 +102,7 @@ inrange(const Interactable *in) {
   rz = in->ntt->z + in->ntt->shape.offz;
   dx = P->x - rx; dz = P->z - rz;
   distsq = dx*dx + dz*dz;
-  reach = in->ntt->shape.aabb.hx + in->reach;
+  reach = in->ntt->shape.aabb.hx + in->def->reach;
   return distsq <= reach*reach;
 }
 
@@ -88,13 +142,13 @@ ntrctprompt(Visent **outntt, const char **outlabel) {
   int i;
   if (activeidx >= 0) {
     *outntt = ntrcts[activeidx].ntt;
-    *outlabel = ntrcts[activeidx].activelabel;
+    *outlabel = ntrcts[activeidx].def->activelabel;
     return 1;
   }
   i = findinrange();
   if (i < 0) { return 0; }
   *outntt = ntrcts[i].ntt;
-  *outlabel = ntrcts[i].label;
+  *outlabel = ntrcts[i].def->label;
   return 1;
 }
 
@@ -110,10 +164,10 @@ ntrctupdate(double dt) {
     return;
   }
   in->tickaccum += (float)dt;
-  if (in->tickaccum >= in->tickinterval) {
-    in->tickaccum -= in->tickinterval;
+  if (in->tickaccum >= in->def->tickinterval) {
+    in->tickaccum -= in->def->tickinterval;
     if ((float)rand() / (float)RAND_MAX < INTERACTCHANCE) {
-      playergivexp(in->stat, in->xpgain);
+      playergivexp(in->def->stat, in->def->xpgain);
     }
   }
 }

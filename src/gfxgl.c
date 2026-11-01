@@ -21,8 +21,6 @@ TTFAtlas hudfont;
 
 #define GIZMOPX 96
 #define GIZMOMGN 10
-TEMP
-#define TREEXP 45
 #define PROMPTMARGIN 0.3f
 #define BARW 220.0f
 #define BARH 14.0f
@@ -103,7 +101,10 @@ glinit() {
   tree->shape.offy = 2.0f;
   tree->shape.offz = 0.0f;
   regstatic(tree);
-  regntrct(tree, INTERACT_TREE, PLEVEL_BOTANY, TREEXP, "Chop tree", "Chopping...", 1.0f);
+  if (!loadinteractdefs("assets/interact.def")) {
+    fprintf(stderr, "glinit: failed to load interactables definitions\n");
+  }
+  regntrct(tree, INTERACT_TREE);
   if (ttfbuildatlas(&hudfont, "assets/lib.ttf", 24.0f)) {
     fprintf(stderr, "glinit: filed to build HUD font atlas\n");
   }

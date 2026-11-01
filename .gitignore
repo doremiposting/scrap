@@ -1,6 +1,8 @@
 nob
 nob.old
 nob.old.c
+save0.scr
+assets/*.def
 scrap*
 build/*.o
 assets/*.ttf

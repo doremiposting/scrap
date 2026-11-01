@@ -57,5 +57,6 @@ void orbitcam(Camera *c, float dth, float r);
 void camlookat(Camera *c, float p, float y, float r);
 void camrot2(Camera *c, float p, float y, float r);
 void camrotalong(Camera *c, float dp, float dy, float dr);
+int statfromname(const char *name);
 
 #endif /* GPPLAYER_H */
