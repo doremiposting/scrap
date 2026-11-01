@@ -20,12 +20,17 @@ typedef struct {
   int channeling;
   Playerstatistics stat;
   unsigned xpgain;
+  const char *label, *activelabel;
 } Interactable;
 
+int ntrctisactive();
+float ntrctprogress();
 void regntrct(Visent *ntt, Interactflvr type, Playerstatistics stat,
-    unsigned xpgain, float tickinterval);
+    unsigned xpgain, const char *label, const char *activelabel,
+    float tickinterval);
 void ntrcttoggle();
 void ntrctcancel();
 void ntrctupdate(double dt);
+int ntrctprompt(Visent **outntt, const char **outlabel);
 
 #endif /* GPINTERACTABLE_H */

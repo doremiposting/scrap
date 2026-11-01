@@ -8,9 +8,21 @@ static Interactable ntrcts[MAXINTERACTABLES];
 static int ntrctcnt;
 static int activeidx = -1;
 
+int
+ntrctisactive() {
+  return activeidx >= 0;
+}
+
+float
+ntrctprogress() {
+  if (activeidx < 0) { return 0.0f; }
+  return ntrcts[activeidx].tickaccum / ntrcts[activeidx].tickinterval;
+}
+
 void
 regntrct(Visent *ntt, Interactflvr type, Playerstatistics stat, 
-    unsigned xpgain, float tickinterval) {
+    unsigned xpgain, const char *label, const char *activelabel,
+    float tickinterval) {
   Interactable *in;
   if (ntrctcnt >= MAXINTERACTABLES) {
     fprintf(stderr, "Couldn't register new interactable, maximum reached!\n");
@@ -22,6 +34,8 @@ regntrct(Visent *ntt, Interactflvr type, Playerstatistics stat,
   in->reach = INTERACTREACH;
   in->stat = stat;
   in->xpgain = xpgain;
+  in->label = label;
+  in->activelabel = activelabel;
   in->tickinterval = tickinterval;
   in->tickaccum = 0.0f;
   in->channeling = 0;
@@ -38,19 +52,26 @@ inrange(const Interactable *in) {
   return distsq <= reach*reach;
 }
 
+static int
+findinrange() {
+  int i;
+  for (i = 0; i < ntrctcnt; i++) {
+    if (inrange(&ntrcts[i])) { return i; }
+  }
+  return -1;
+}
+
 void 
 ntrcttoggle() {
   int i;
   if (activeidx >= 0) {
     ntrctcancel(); return;
   }
-  for (i = 0; i < ntrctcnt; i++) {
-    if (inrange(&ntrcts[i])) {
-      ntrcts[i].channeling = 1;
-      ntrcts[i].tickaccum = 0.0f;
-      activeidx = i;
-      return;
-    }
+  i = findinrange();
+  if (i >= 0) {
+    ntrcts[i].channeling = 1;
+    ntrcts[i].tickaccum = 0.0f;
+    activeidx = i;
   }
 }
 
@@ -62,10 +83,27 @@ ntrctcancel() {
   activeidx = -1;
 }
 
+int
+ntrctprompt(Visent **outntt, const char **outlabel) {
+  int i;
+  if (activeidx >= 0) {
+    *outntt = ntrcts[activeidx].ntt;
+    *outlabel = ntrcts[activeidx].activelabel;
+    return 1;
+  }
+  i = findinrange();
+  if (i < 0) { return 0; }
+  *outntt = ntrcts[i].ntt;
+  *outlabel = ntrcts[i].label;
+  return 1;
+}
+
 void
 ntrctupdate(double dt) {
   Interactable *in;
-  if (activeidx < 0) { return; }
+  if (activeidx < 0) {
+    return;
+  }
   in = &ntrcts[activeidx];
   if (!inrange(in)) {
     ntrctcancel();
@@ -76,7 +114,6 @@ ntrctupdate(double dt) {
     in->tickaccum -= in->tickinterval;
     if ((float)rand() / (float)RAND_MAX < INTERACTCHANCE) {
       playergivexp(in->stat, in->xpgain);
-    } else {
     }
   }
 }

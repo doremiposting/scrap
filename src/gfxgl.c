@@ -23,6 +23,16 @@ TTFAtlas hudfont;
 #define GIZMOMGN 10
 TEMP
 #define TREEXP 45
+#define PROMPTMARGIN 0.3f
+#define BARW 220.0f
+#define BARH 14.0f
+#define BARBOTTOMMARGIN 60.0f
+
+typedef enum { BAR_FILL, BAR_DRAIN } Bardir;
+
+static int promptvisible;
+static float promptsx, promptsy;
+static const char *promptlabel;
 
 #define updateclamp(x) \
   do { \
@@ -46,6 +56,25 @@ update(int state, int ox, int nx, int oy, int ny) {
       P->view->z -= (float)(dx + dy) / 1000.0f;
       break;
   }
+}
+
+static int
+worldtoscreen(float wx, float wy, float wz, float *sx, float *sy) {
+  GLdouble mv[16], proj[16];
+  GLint vp[4];
+  GLdouble wsx, wsy, wsz;
+  glGetDoublev(GL_MODELVIEW_MATRIX, mv);
+  glGetDoublev(GL_PROJECTION_MATRIX, proj);
+  glGetIntegerv(GL_VIEWPORT, vp);
+  if (!gluProject((GLdouble)wx, (GLdouble)wy, (GLdouble)wz, mv, proj, vp,
+        &wsx, &wsy, &wsz)) {
+    return 0;
+  }
+  /* wsz outside [0,1] means means behind the near plane or past the far plane */
+  if (wsz < 0.0 || wsz > 1.0) { return 0; }
+  *sx = (float)wsx;
+  *sy = (float)scrh - (float)wsy;
+  return 1;
 }
 
 void
@@ -74,7 +103,7 @@ glinit() {
   tree->shape.offy = 2.0f;
   tree->shape.offz = 0.0f;
   regstatic(tree);
-  regntrct(tree, INTERACT_TREE, PLEVEL_BOTANY, TREEXP, 1.0f);
+  regntrct(tree, INTERACT_TREE, PLEVEL_BOTANY, TREEXP, "Chop tree", "Chopping...", 1.0f);
   if (ttfbuildatlas(&hudfont, "assets/lib.ttf", 24.0f)) {
     fprintf(stderr, "glinit: filed to build HUD font atlas\n");
   }
@@ -180,6 +209,23 @@ drawtxtwshadow(const TTFAtlas *a, float x, float y, const char *s) {
   ttfdrawtxt(a, x+1, y+1, s);
 }
 
+static void
+drawbar(float x, float y, float w, float h, float frac, Bardir dir) {
+  float fillw;
+  if (frac < 0.0f) { frac = 0.0f; }
+  if (frac > 1.0f) { frac = 1.0f; }
+  fillw = (dir == BAR_DRAIN) ? w * (1.0f - frac) : w * frac;
+  glColor3f(0.1f, 0.1f, 0.1f);
+  glRectf(x, y, x+w, y+h);
+  glColor3f(0.9f, 0.8f, 0.2f);
+  glRectf(x, y, x+fillw, y+h);
+  glColor3f(1.0f, 1.0f, 1.0f);
+  glBegin(GL_LINE_LOOP);
+    glVertex2f(x,y); glVertex2f(x+w, y);
+    glVertex2f(x+w, y+h); glVertex2f(x, y+h);
+  glEnd();
+}
+
 static inline void
 colortxtwshadow(const TTFAtlas *a, float x, float y, const char *s,
     float r, float g, float b) {
@@ -240,6 +286,18 @@ drawhud() {
   drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
   snprintf(buf, sizeof(buf), "botany: Lv%u, Xp: %u", P->Cl[PLEVEL_BOTANY], P->S[PLEVEL_BOTANY]);
   drawtxtwshadow(&hudfont, 10, 30+hudfont.ascent, buf);
+  if (promptvisible) {
+    if (!(ntrctisactive())) {
+      snprintf(buf, sizeof(buf), "[E] %s", promptlabel);
+    } else {
+      snprintf(buf, sizeof(buf), "%s", promptlabel);
+    }
+    drawtxtwshadow(&hudfont, promptsx, promptsy, buf);
+  }
+  if (ntrctisactive()) {
+    drawbar((float)scrw/2.0f - BARW/2.0f, (float)scrh - BARBOTTOMMARGIN,
+        BARW, BARH, ntrctprogress(), BAR_FILL);
+  }
   drawgizmo();
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_MODELVIEW);
@@ -251,6 +309,7 @@ drawhud() {
 
 void
 render() {
+  Visent *promptntt;
   static float spin = 0.0f;
   static float tpdx = 0.05f;
   static float tpdy = 0.05f;
@@ -270,6 +329,12 @@ render() {
   glRotatef(P->view->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
   glRotatef(P->view->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
   glTranslatef(-P->view->x, -P->view->y, -P->view->z);
+  promptvisible = ntrctprompt(&promptntt, &promptlabel);
+  if (promptvisible) {
+    promptvisible = worldtoscreen(promptntt->x,
+        promptntt->y + promptntt->shape.offy + promptntt->shape.aabb.hy + PROMPTMARGIN,
+        promptntt->z, &promptsx, &promptsy);
+  }
   glColor3f(0, 1, 1);
   drawterrain();
   if (wiremesh) {
