@@ -6,6 +6,7 @@
 #include "gfxobj.h"
 #include "gpcoll.h"
 #include "main.h"
+#include "gpinventory.h"
 
 typedef enum { CAMERA_FOLLOW, CAMERA_FP, CAMERA_FREECAM, CAMERA_END } Cameramode;
 typedef enum { PLAYER_STANDING, PLAYER_JUMPING, PLAYER_END } Playermvmt;
@@ -14,8 +15,17 @@ typedef struct Camerastruct {
   float x, y, z;
   float pitch, /* up-down */ yaw, /* lateral side-to-side */ roll; /* circular rotation */
 } Camera;
+/* TODO: XXX: If we ever have expansion packs, we need to handle this separately.
+ * "new category support probably needs those categories to stop being
+ * compile-time enums at all (string- or integer-ID-resolved purely from data,
+ * the alternative I mentioned but didn’t pick in part (a))" */
+/* XXX: New skills get defined here and exactly only here */
+#define PLEVEL_TYPELIST \
+  X(PLEVEL_BOTANY, "botany")
 typedef enum {
-  PLEVEL_BOTANY,
+#define X(id, nm) id,
+  PLEVEL_TYPELIST
+#undef X
   PLEVEL_END
 } Playerstatistics;
 typedef struct Playerstruct {
@@ -32,6 +42,7 @@ typedef struct Playerstruct {
   Collshape shape;
   unsigned S[PLEVEL_END];
   unsigned char Cl[PLEVEL_END], Ml[PLEVEL_END];
+  Inventoryslot *inv;
 } Player;
 extern Player *P;
 #define CDX(P) (P->view->x - P->x)
@@ -58,5 +69,6 @@ void camlookat(Camera *c, float p, float y, float r);
 void camrot2(Camera *c, float p, float y, float r);
 void camrotalong(Camera *c, float dp, float dy, float dr);
 int statfromname(const char *name);
+int loadxpcurve(const char *fn);
 
 #endif /* GPPLAYER_H */

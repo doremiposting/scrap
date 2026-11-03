@@ -5,13 +5,18 @@
 
 #include "gpplayer.h"
 #include "gptable.h"
+#include "gpinventory.h"
 #include "gpinteractable.h"
 
 static Interactable ntrcts[MAXINTERACTABLES];
 static int ntrctcnt;
 static int activeidx = -1;
 
-static const char *interactnames[INTERACT_END] = { "tree" };
+static const char *interactnames[INTERACT_END] = {
+#define X(id, nm) nm,
+  INTERACT_TYPELIST
+#undef X
+};
 static const Fielddef interactdeffields[] = {
   { "name", FIELD_STR, offsetof(Interactdef, name), DEFNAMELEN },
   { "statname", FIELD_STR, offsetof(Interactdef, statname), DEFNAMELEN },
@@ -20,6 +25,7 @@ static const Fielddef interactdeffields[] = {
   { "reach", FIELD_FLOAT, offsetof(Interactdef, reach), 0 },
   { "label", FIELD_STR, offsetof(Interactdef, label), DEFLABELLEN },
   { "activelabel", FIELD_STR, offsetof(Interactdef, activelabel), DEFLABELLEN },
+  { "dropitem", FIELD_STR, offsetof(Interactdef, dropitemname), DEFNAMELEN },
 };
 static Interactdef interactdefs[INTERACT_END];
 static int ndefs;
@@ -51,6 +57,14 @@ loadinteractdefs(const char *fn) {
       return 0;
     }
     interactdefs[i].stat = (Playerstatistics)statid;
+    if (!strcmp(interactdefs[i].dropitemname, "none")) {
+      interactdefs[i].dropitemid = ITEMID_NONE;
+    } else if (!itemidfromname(interactdefs[i].dropitemname, &interactdefs[i].dropitemid)) {
+      fprintf(stderr, "%s: unknown drop item '%s' for '%s'\n",
+          fn, interactdefs[i].dropitemname, interactdefs[i].name);
+      ndefs = 0;
+      return 0;
+    }
   }
   for (i = 0; i < INTERACT_END; i++) {
     if (!finddef((Interactflvr)i)) {
@@ -168,6 +182,9 @@ ntrctupdate(double dt) {
     in->tickaccum -= in->def->tickinterval;
     if ((float)rand() / (float)RAND_MAX < INTERACTCHANCE) {
       playergivexp(in->def->stat, in->def->xpgain);
+      if (in->def->dropitemid != ITEMID_NONE) {
+        invadditem(P->inv, in->def->dropitemid, 1);
+      }
     }
   }
 }

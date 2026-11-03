@@ -14,6 +14,8 @@ typedef struct {
   size_t size;
 } Fielddef;
 
+/* TODO: We need a pack file format, a pack loader, and a bake tool
+ * before shipping anything... That's a problem for later me... */
 int loadtable(const char *fn, const Fielddef *fields, int nfields,
     void *out, int recsize, int maxrecs);
 

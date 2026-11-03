@@ -66,6 +66,9 @@ main(int argc, char *argv[]) {
   compilefile("src/gpinteractable.c", "build/gpinteractable.o");
 
   boilerplate();
+  compilefile("src/gpinventory.c", "build/gpinventory.o");
+
+  boilerplate();
   compilefile("src/gptable.c", "build/gptable.o");
 
   boilerplate();
@@ -107,7 +110,7 @@ main(int argc, char *argv[]) {
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
     "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o",
     "build/gfxttf.o", "build/gpinteractable.o", "build/gpsave.o",
-    "build/gptable.o"
+    "build/gptable.o", "build/gpinventory.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)

@@ -81,6 +81,9 @@ glinit() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   tp = loadobj("assets/teapot.obj");
+  if (!loadxpcurve("assets/xpcurve.def")) {
+    fprintf(stderr, "glinit: xp curve load reported failure (used fallback)\n");
+  }
   playerbuildup("assets/pill.obj");
   playermove2(3, 3, 3);
   terrbuildup();
@@ -101,6 +104,9 @@ glinit() {
   tree->shape.offy = 2.0f;
   tree->shape.offz = 0.0f;
   regstatic(tree);
+  if (!itemloadtable("assets/items.def", PACKID_BASE)) {
+    fprintf(stderr, "glinit: failed to load item definitions\n");
+  }
   if (!loadinteractdefs("assets/interact.def")) {
     fprintf(stderr, "glinit: failed to load interactables definitions\n");
   }

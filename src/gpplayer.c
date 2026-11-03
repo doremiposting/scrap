@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "main.h"
 
@@ -9,16 +10,20 @@
 #include "gfxobj.h"
 #include "gpchar.h"
 #include "gfxterrain.h"
-
 #include "gpplayer.h"
+#include "gptable.h"
+#include "gpinventory.h"
 /* TODO: If we ever have multiplayer support, this will need to be an array of... */
 Player *P;
 
-/* TODO: placeholder xp curve */
-#define XPPERLEVEL 100u 
-#define MAXPLAYERLEVEL 99
+#define MAXPLAYERLEVEL 120
+#define XPREFLEVEL 99
 
-static const char *statnames[PLEVEL_END] = { "botany" };
+static const char *statnames[PLEVEL_END] = {
+#define X(id, nm) nm,
+  PLEVEL_TYPELIST
+#undef X
+};
 
 int
 statfromname(const char *name) {
@@ -29,19 +34,89 @@ statfromname(const char *name) {
   return -1;
 }
 
+typedef struct {
+  unsigned softcap;
+  unsigned levelsperdouble;
+  unsigned targetxp;
+  unsigned maxxp;
+} Xpcurvedef;
+
+static const Fielddef xpcurvefields[] = {
+  { "softcap", FIELD_UINT, offsetof(Xpcurvedef, softcap), 0 },
+  { "levelsperdouble", FIELD_UINT, offsetof(Xpcurvedef, levelsperdouble), 0 },
+  { "targetxp", FIELD_UINT, offsetof(Xpcurvedef, targetxp), 0 },
+  { "maxxp", FIELD_UINT, offsetof(Xpcurvedef, maxxp), 0 },
+};
+
+static unsigned xpthresh[MAXPLAYERLEVEL + 1];
+static unsigned xpcurvesoftcap = MAXPLAYERLEVEL;
+static unsigned xpcurvemaxxp = 0xffffffffu;
+
+static
+void
+xpcurvefallback(Xpcurvedef *def) {
+  def->softcap = 99;
+  def->levelsperdouble = 10;
+  def->targetxp = 10000000u;
+  def->maxxp = 200000000u;
+}
+
+int
+loadxpcurve(const char *fn) {
+  Xpcurvedef def;
+  double r, denom, base, acc;
+  unsigned n;
+  int ok;
+  ok = (loadtable(fn, xpcurvefields, FIELDCOUNT(xpcurvefields), &def,
+          sizeof(def), 1) == 1);
+  if (ok) {
+    if (def.softcap < 2 || def.softcap > MAXPLAYERLEVEL) {
+      fprintf(stderr, "%s: levelcap %u doesn't match compiled MAXPLAYERLEVEL (%d)\n",
+          fn, def.softcap, MAXPLAYERLEVEL);
+      ok = 0;
+    } else if (def.levelsperdouble < 1) {
+      fprintf(stderr, "%s: levelsperdouble must be at least 1\n", fn);
+      ok = 0;
+    } else if (def.maxxp < def.targetxp) {
+      fprintf(stderr, "%s: maxxp (%u) is below targetxp (%u) -- softcap unreachable\n",
+          fn, def.maxxp, def.targetxp);
+      ok = 0;
+    }
+  }
+  if (!ok) {
+    fprintf(stderr, "%s: using built-in fallback xp curve\n", fn);
+    xpcurvefallback(&def);
+  }
+  xpcurvesoftcap = def.softcap;
+  xpcurvemaxxp = def.maxxp;
+  r = pow(2.0, 1.0 / (double)def.levelsperdouble);
+  denom = r * (pow(r, (double)(XPREFLEVEL - 1)) - 1.0) / (r - 1.0);
+  base = (double)def.targetxp / denom;
+  xpthresh[1] = 0;
+  acc = 0.0;
+  for (n = 1; n < def.softcap; n++) {
+    acc += base * pow(r, (double)n);
+    xpthresh[n+1] = (unsigned)(acc + 0.5);
+  }
+  return ok;
+}
+
 static
 unsigned char
 levelforxp(unsigned xp) {
   unsigned lvl;
-  lvl = xp / XPPERLEVEL + 1;
-  if (lvl > MAXPLAYERLEVEL) { lvl = MAXPLAYERLEVEL; }
+  lvl = 1;
+  while (lvl < xpcurvesoftcap && xp >= xpthresh[lvl+1]) { lvl++; }
   return (unsigned char)lvl;
 }
 
 void
 playergivexp(Playerstatistics stat, unsigned amount) {
   unsigned char newmax, delta;
-  P->S[stat] += amount;
+  unsigned long long newxp;
+  newxp = (unsigned long long)P->S[stat] + amount;
+  if (newxp > xpcurvemaxxp) { newxp = xpcurvemaxxp; }
+  P->S[stat] = (unsigned)newxp;
   newmax = levelforxp(P->S[stat]);
   if (newmax > P->Ml[stat]) {
     delta = (unsigned char)(newmax - P->Ml[stat]);
@@ -80,6 +155,7 @@ playerbuildup(const char *meshfp) {
   for (i = 0; i < PLEVEL_END; i++) {
     P->Cl[i] = P->Ml[i] = 1;
   }
+  P->inv = buildupinventory();
   return P->id;
 }
 void
@@ -89,6 +165,7 @@ playerteardown(unsigned int id) {
    * be 0, and teardown the global player struct *P */
   (void)(id);
   teardowncam(P->view);
+  free(P->inv);
   killmesh(P->m);
   free(P);
 }
