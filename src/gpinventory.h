@@ -1,6 +1,8 @@
 #ifndef GPINVENTORY_H
 #define GPINVENTORY_H
 
+#include "gfxtex.h"
+
 #define ITEMNAMELEN 48
 #define ITEMPATHLEN 64
 
@@ -25,6 +27,7 @@ typedef struct {
   char name[ITEMNAMELEN];
   char iconfp[ITEMPATHLEN];
   char modelfp[ITEMPATHLEN];
+  Texture icontex;
 } Item;
 
 typedef struct {
@@ -37,5 +40,8 @@ int itemidfromname(const char *name, unsigned int *outid);
 const Item *finditem(unsigned int id);
 Inventoryslot * buildupinventory();
 int invadditem(Inventoryslot *inv, unsigned int itemid, unsigned int qty);
+
+void invtoggle();
+int invisopen();
 
 #endif /* GPINVENTORY_H */

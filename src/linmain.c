@@ -178,6 +178,9 @@ main(int argc, char *argv[]) {
             case 'e':
               ntrcttoggle();
               break;
+            case XK_Tab:
+              invtoggle();
+              break;
             case XK_F5:
               if (savegame(SAVEFILE)) {
                 fprintf(stderr, "saved to %s\n", SAVEFILE);

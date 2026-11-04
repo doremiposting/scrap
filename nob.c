@@ -89,6 +89,11 @@ main(int argc, char *argv[]) {
 
   boilerplate();
   cmd_append(&cmd, "-lGL");
+  cmd_append(&cmd, "-Icontrib/stb");
+  compilefile("src/gfxtex.c", "build/gfxtex.o");
+
+  boilerplate();
+  cmd_append(&cmd, "-lGL");
   cmd_append(&cmd, "-lGLX");
   compilefile("src/gfxobj.c", "build/gfxobj.o");
 
@@ -110,7 +115,7 @@ main(int argc, char *argv[]) {
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
     "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o",
     "build/gfxttf.o", "build/gpinteractable.o", "build/gpsave.o",
-    "build/gptable.o", "build/gpinventory.o"
+    "build/gptable.o", "build/gpinventory.o", "build/gfxtex.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)

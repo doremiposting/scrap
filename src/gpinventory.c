@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "gptable.h"
+#include "gfxtex.h"
 #include "gpinventory.h"
 
 typedef struct {
@@ -23,6 +24,7 @@ static const Fielddef itemfields[] = {
 static Itemrow rows[MAXITEMS];
 static Item items[MAXITEMS];
 static int itemcnt;
+static int invopen;
 
 int
 itemloadtable(const char *fp, unsigned int packid) {
@@ -56,6 +58,11 @@ itemloadtable(const char *fp, unsigned int packid) {
     strcpy(items[itemcnt].name, rows[i].name);
     strcpy(items[itemcnt].iconfp, rows[i].iconfp);
     strcpy(items[itemcnt].modelfp, rows[i].modelfp);
+    if (!loadtexture(items[itemcnt].iconfp, &items[itemcnt].icontex)) {
+      fprintf(stderr, "%s: failed to load icon for item '%s'\n",
+          fp, items[itemcnt].name);
+      return 0;
+    }
     itemcnt++;
   }
   return 1;
@@ -108,4 +115,14 @@ invadditem(Inventoryslot *inv, unsigned int itemid, unsigned int qty) {
   inv[empty].itemid = itemid;
   inv[empty].quantity = qty;
   return 1;
+}
+
+void
+invtoggle() {
+  invopen = !invopen;
+}
+
+int
+invisopen() {
+  return invopen;
 }

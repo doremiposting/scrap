@@ -9,6 +9,8 @@
 #include "gpchar.h"
 #include "gpplayer.h"
 #include "gpinteractable.h"
+#include "gfxtex.h"
+#include "gpinventory.h"
 
 Mesh *tp;
 Visent *box;
@@ -25,6 +27,10 @@ TTFAtlas hudfont;
 #define BARW 220.0f
 #define BARH 14.0f
 #define BARBOTTOMMARGIN 60.0f
+#define INVPANELX 10.0f
+#define INVPANELY 60.0f
+#define INVICONSZ 32.0f
+#define INVROWGAP 6.0f
 
 typedef enum { BAR_FILL, BAR_DRAIN } Bardir;
 
@@ -276,6 +282,24 @@ drawgizmo() {
 }
 
 static void
+drawinventory() {
+  int i;
+  char buf[64];
+  const Item *it;
+  float y;
+  y = INVPANELY;
+  for (i = 0; i < MAXINVSLOTS; i++) {
+    if (P->inv[i].itemid == ITEMID_NONE) { continue; }
+    it = finditem(P->inv[i].itemid);
+    if (!it) { continue; }
+    drawicon(&it->icontex, INVPANELX, y, INVICONSZ, INVICONSZ);
+    snprintf(buf, sizeof(buf), "%s x %u", it->name, P->inv[i].quantity);
+    drawtxtwshadow(&hudfont, INVPANELX+INVICONSZ+6.0f, y + INVICONSZ*0.5f, buf);
+    y += INVICONSZ + INVROWGAP;
+  }
+}
+
+static void
 drawhud() {
   char buf[64];
   glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
@@ -304,6 +328,9 @@ drawhud() {
   if (ntrctisactive()) {
     drawbar((float)scrw/2.0f - BARW/2.0f, (float)scrh - BARBOTTOMMARGIN,
         BARW, BARH, ntrctprogress(), BAR_FILL);
+  }
+  if (invisopen()) {
+    drawinventory();
   }
   drawgizmo();
   glEnable(GL_DEPTH_TEST);
