@@ -71,6 +71,8 @@ killtexture(Texture *t) {
 
 void
 drawicon(const Texture *t, float x, float y, float w, float h) {
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glColor3f(1.0f, 1.0f, 1.0f);
   glEnable(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, t->id);
@@ -81,4 +83,5 @@ drawicon(const Texture *t, float x, float y, float w, float h) {
   glTexCoord2f(0.0f, 1.0f); glVertex2f(x, y+h);
   glEnd();
   glDisable(GL_TEXTURE_2D);
+  glDisable(GL_BLEND);
 }

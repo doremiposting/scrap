@@ -181,6 +181,15 @@ main(int argc, char *argv[]) {
             case XK_Tab:
               invtoggle();
               break;
+            case XK_Up:
+              if (invisopen()) { invcursormove(-1); }
+              break;
+            case XK_Down:
+              if (invisopen()) { invcursormove(1); }
+              break;
+            case 'x':
+              if (invisopen()) { dropselecteditem(); }
+              break;
             case XK_F5:
               if (savegame(SAVEFILE)) {
                 fprintf(stderr, "saved to %s\n", SAVEFILE);

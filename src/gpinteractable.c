@@ -25,6 +25,8 @@ static const Fielddef interactdeffields[] = {
   { "reach", FIELD_FLOAT, offsetof(Interactdef, reach), 0 },
   { "label", FIELD_STR, offsetof(Interactdef, label), DEFLABELLEN },
   { "activelabel", FIELD_STR, offsetof(Interactdef, activelabel), DEFLABELLEN },
+  /* TODO: We can get multiple dropped items by iterating over a comma-separated
+   * list with strtok, right? */
   { "dropitem", FIELD_STR, offsetof(Interactdef, dropitemname), DEFNAMELEN },
 };
 static Interactdef interactdefs[INTERACT_END];

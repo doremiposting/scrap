@@ -11,6 +11,7 @@
 #include "gpinteractable.h"
 #include "gfxtex.h"
 #include "gpinventory.h"
+#include "gpworldspawn.h"
 
 Mesh *tp;
 Visent *box;
@@ -27,6 +28,8 @@ TTFAtlas hudfont;
 #define BARW 220.0f
 #define BARH 14.0f
 #define BARBOTTOMMARGIN 60.0f
+#define INVROWW 180.0f
+#define DROPOFFSET 1.5f
 #define INVPANELX 10.0f
 #define INVPANELY 60.0f
 #define INVICONSZ 32.0f
@@ -59,6 +62,21 @@ update(int state, int ox, int nx, int oy, int ny) {
     case ZOOM:
       P->view->z -= (float)(dx + dy) / 1000.0f;
       break;
+  }
+}
+
+void
+dropselecteditem() {
+  unsigned int itemid, qty;
+  float dx, dz;
+  Visent *ntt;
+  if (!invtakeselected(P->inv, &itemid, &qty)) { return; }
+  dx = sinf(P->yaw) * DROPOFFSET;
+  dz = cosf(P->yaw) * DROPOFFSET;
+  ntt = spawnworlditem(itemid, qty, P->x+dx, P->y, P->z+dz);
+  if (!ntt) {
+    /* Something went wrong loading worldspawn item, put it back */
+    invadditem(P->inv, itemid, qty);
   }
 }
 
@@ -283,13 +301,18 @@ drawgizmo() {
 
 static void
 drawinventory() {
-  int i;
+  int i, selidx;
   char buf[64];
   const Item *it;
   float y;
+  selidx = invselectedslotidx(P->inv);
   y = INVPANELY;
   for (i = 0; i < MAXINVSLOTS; i++) {
     if (P->inv[i].itemid == ITEMID_NONE) { continue; }
+    if (i == selidx) {
+      glColor3f(0.3f, 0.3f, 0.1f);
+      glRectf(INVPANELX-2.0f, y-2.0f, INVPANELX+INVROWW, y+INVICONSZ+2.0f);
+    }
     it = finditem(P->inv[i].itemid);
     if (!it) { continue; }
     drawicon(&it->icontex, INVPANELX, y, INVICONSZ, INVICONSZ);
@@ -344,6 +367,8 @@ drawhud() {
 void
 render() {
   Visent *promptntt;
+  int wi;
+  const Worlditem *w;
   static float spin = 0.0f;
   static float tpdx = 0.05f;
   static float tpdy = 0.05f;
@@ -414,6 +439,20 @@ render() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
   glPopMatrix();
+  for (wi = 0; wi < worlditemcnt(); wi++) {
+    w = worlditemat(wi);
+    glPushMatrix();
+    glColor3f(0.8f, 0.8f, 0.8f);
+    glTranslatef(w->ntt->x, w->ntt->y, w->ntt->z);
+    drawmesh(w->ntt->m);
+    if (wiremesh) {
+      glColor3f(0,0,0);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      drawmesh(w->ntt->m);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+    glPopMatrix();
+  }
   /* XXX: Front face indicator, remove me later. */
   glPushMatrix();
   glTranslatef(P->x, P->y, P->z);

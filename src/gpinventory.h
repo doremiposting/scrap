@@ -43,5 +43,9 @@ int invadditem(Inventoryslot *inv, unsigned int itemid, unsigned int qty);
 
 void invtoggle();
 int invisopen();
+void invcursormove(int delta);
+int invselectedslotidx(const Inventoryslot *inv);
+int invtakeselected(Inventoryslot *inv, unsigned int *outitemid,
+    unsigned int *outqty);
 
 #endif /* GPINVENTORY_H */

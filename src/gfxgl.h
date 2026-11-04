@@ -22,4 +22,6 @@ void glkill();
 void glreshape(int width, int height);
 void drawmesh(const Mesh *m);
 void render();
+
+void dropselecteditem();
 #endif /* GFXGL_H */

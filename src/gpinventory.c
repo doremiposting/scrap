@@ -25,6 +25,7 @@ static Itemrow rows[MAXITEMS];
 static Item items[MAXITEMS];
 static int itemcnt;
 static int invopen;
+static int invcursor;
 
 int
 itemloadtable(const char *fp, unsigned int packid) {
@@ -125,4 +126,44 @@ invtoggle() {
 int
 invisopen() {
   return invopen;
+}
+
+void
+invcursormove(int delta) {
+  invcursor += delta;
+  if (invcursor < 0) { invcursor = 0; }
+}
+
+int
+invselectedslotidx(const Inventoryslot *inv) {
+  int i, occ, idx;
+  occ = 0;
+  for (i = 0; i < MAXINVSLOTS; i++) {
+    if (inv[i].itemid != ITEMID_NONE) { occ++; }
+  }
+  if (occ == 0) {
+    invcursor = 0;
+    return -1;
+  }
+  if (invcursor >= occ) { invcursor = occ - 1; }
+  idx = 0;
+  for (i = 0; i < MAXINVSLOTS; i++) {
+    if (inv[i].itemid == ITEMID_NONE) { continue; }
+    if (idx == invcursor) { return i; }
+    idx++;
+  }
+  return -1; /* unreachable, occ > 0 above guarantees a match */
+}
+
+int
+invtakeselected(Inventoryslot *inv, unsigned int *outitemid,
+    unsigned int *outqty) {
+  int idx;
+  idx = invselectedslotidx(inv);
+  if (idx < 0) { return 0; }
+  *outitemid = inv[idx].itemid;
+  *outqty = inv[idx].quantity;
+  inv[idx].itemid = ITEMID_NONE;
+  inv[idx].quantity = 0;
+  return 1;
 }
