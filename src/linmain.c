@@ -14,6 +14,7 @@
 #include "gpplayer.h"
 #include "gpchar.h"
 #include "gpinteractable.h"
+#include "gpworldspawn.h"
 #include "gpsave.h"
 
 #define SAVEFILE "save0.scr"
@@ -176,11 +177,17 @@ main(int argc, char *argv[]) {
               setevent(D_HELD, 1);
               break;
             case 'e':
-              ntrcttoggle();
+              if (!ntrctisactive() && pickupnearest()) {
+                /* picked something up, nothing further to do */
+              } else {
+                ntrcttoggle();
+              }
               break;
             case XK_Tab:
               invtoggle();
               break;
+              /* XXX: Up + Down + X need to be replaced with later inventory
+               * control scheme. */
             case XK_Up:
               if (invisopen()) { invcursormove(-1); }
               break;

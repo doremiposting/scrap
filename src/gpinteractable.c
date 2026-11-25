@@ -102,6 +102,7 @@ regntrct(Visent *ntt, Interactflvr type) {
   if (!def) {
     fprintf(stderr, "regntrct: no definition loaded for interactable type %d\n",
         type);
+    return;
   }
   in = &ntrcts[ntrctcnt++];
   in->ntt = ntt;

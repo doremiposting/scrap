@@ -40,6 +40,7 @@ typedef enum { BAR_FILL, BAR_DRAIN } Bardir;
 static int promptvisible;
 static float promptsx, promptsy;
 static const char *promptlabel;
+static char pickupbuf[64];
 
 #define updateclamp(x) \
   do { \
@@ -367,6 +368,9 @@ drawhud() {
 void
 render() {
   Visent *promptntt;
+  Visent *pickupntt;
+  const char *pickupname;
+  unsigned int pickupqty;
   int wi;
   const Worlditem *w;
   static float spin = 0.0f;
@@ -393,6 +397,13 @@ render() {
     promptvisible = worldtoscreen(promptntt->x,
         promptntt->y + promptntt->shape.offy + promptntt->shape.aabb.hy + PROMPTMARGIN,
         promptntt->z, &promptsx, &promptsy);
+  }
+  if (!promptvisible && worlditemprompt(&pickupntt, &pickupname, &pickupqty)) {
+    snprintf(pickupbuf, sizeof(pickupbuf), "Pick up %s x%u", pickupname, pickupqty);
+    promptlabel = pickupbuf;
+    promptvisible = worldtoscreen(pickupntt->x,
+        pickupntt->y + WORLDITEMPROMPTHEIGHT, pickupntt->z,
+        &promptsx, &promptsy);
   }
   glColor3f(0, 1, 1);
   drawterrain();
