@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "gpplayer.h"
+#include "gpinventory.h"
 #include "gpsave.h"
 
 #define SAVEMAGIC "SCRP"
@@ -91,6 +92,13 @@ savegame(const char *fn) {
     putu8(f, P->Ml[i]);
   }
 
+  for (i = 0; i < MAXINVSLOTS; i++) {
+    if (P->inv[i].itemid == ITEMID_NONE) { continue; }
+    putchunkhdr(f, "INVT", 8);
+    putu32(f, P->inv[i].itemid);
+    putu32(f, P->inv[i].quantity);
+  }
+
   putchunkhdr(f, "END ", 0);
   fclose(f);
   return 1;
@@ -102,6 +110,7 @@ loadgame(const char *fn) {
   char magic[4], tag[4];
   unsigned int version, len, xp;
   unsigned char statid, curlvl, maxlvl;
+  unsigned int invitemid, invqty;
 
   f = fopen(fn, "rb");
   if (!f) {
@@ -119,9 +128,12 @@ loadgame(const char *fn) {
     return 0;
   }
 
+  /* XXX: Only clear inventory once file is confirmed loadable. */
+  invclear(P->inv);
+
   for (;;) {
     if (!getchunkhdr(f, tag, &len)) {
-      fprintf(stderr, "loadgame: %s truncated (no EnD chunk)\n", fn);
+      fprintf(stderr, "loadgame: %s truncated (no END chunk)\n", fn);
       fclose(f);
       return 0;
     }
@@ -136,6 +148,12 @@ loadgame(const char *fn) {
         P->S[statid] = xp;
         P->Cl[statid] = curlvl;
         P->Ml[statid] = maxlvl;
+      }
+    } else if (!memcmp(tag, "INVT", 4) && len == 8) {
+      getu32(f, &invitemid); getu32(f, &invqty);
+      if (!invadditem(P->inv, invitemid, invqty)) {
+        fprintf(stderr, "loadgame: %s: couldn't restore item %u x%u, "
+            "(unknown item or inventory full)\n", fn, invitemid, invqty);
       }
     } else {
       /* unrecognized tag or known tag with unexpected length */

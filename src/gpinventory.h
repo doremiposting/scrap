@@ -40,6 +40,7 @@ int itemidfromname(const char *name, unsigned int *outid);
 const Item *finditem(unsigned int id);
 Inventoryslot * buildupinventory();
 int invadditem(Inventoryslot *inv, unsigned int itemid, unsigned int qty);
+void invclear(Inventoryslot *inv);
 
 void invtoggle();
 int invisopen();

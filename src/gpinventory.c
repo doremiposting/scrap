@@ -94,10 +94,18 @@ finditem(unsigned int id) {
 Inventoryslot *
 buildupinventory() {
   Inventoryslot *inv;
-  int i;
   inv = calloc(MAXINVSLOTS, sizeof(Inventoryslot));
-  for (i = 0; i < MAXINVSLOTS; i++) { inv[i].itemid = ITEMID_NONE; }
+  invclear(inv);
   return inv;
+}
+
+void
+invclear(Inventoryslot *inv) {
+  int i;
+  for (i = 0; i < MAXINVSLOTS; i++) {
+    inv[i].itemid = ITEMID_NONE;
+    inv[i].quantity = 0;
+  }
 }
 
 int
