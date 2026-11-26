@@ -39,6 +39,7 @@ Window window;
 struct timespec thene, thenr, nowe, nowr, frmst, frmend;
 int WWIDTH, WHEIGHT;
 struct timespec tthen, tnow;
+double nowfps;
 long long dtns, physat;
 int perfstat;
 
@@ -85,7 +86,7 @@ x11init() {
   animate = 1;
   wiremesh = 0;
   showcoll = 0;
-  lightmode = LIGHT_FULLBRIGHT;
+  lightmode = LIGHT_DAY;
   perfstat = 1;
   glinit();
   GETNS(tthen); GETNS(tnow); GETNS(thenr); GETNS(nowr); GETNS(frmst); GETNS(frmend);
@@ -107,7 +108,7 @@ main(int argc, char *argv[]) {
   int doexit;
   double dt;
   long long nowft;
-  double bestfps, worstfps, nowfps;
+  double bestfps, worstfps;
   const long long physdt = 1000000000LL / 120;
   const float physdtf = (float)(1.0 / 120.0);
   GLuint state;

@@ -26,6 +26,8 @@ int lightmode;
 int scrw, scrh;
 TTFAtlas hudfont;
 
+extern double nowfps;
+
 #define GIZMOPX 96
 #define GIZMOMGN 10
 #define PROMPTMARGIN 0.3f
@@ -35,7 +37,7 @@ TTFAtlas hudfont;
 #define INVROWW 180.0f
 #define DROPOFFSET 1.5f
 #define INVPANELX 10.0f
-#define INVPANELY 60.0f
+#define INVPANELY 100.0f
 #define INVICONSZ 32.0f
 #define INVROWGAP 6.0f
 
@@ -405,8 +407,12 @@ drawhud() {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   snprintf(buf, sizeof(buf), "collision view: %s", showcoll ? "ON" : "OFF");
   drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
-  snprintf(buf, sizeof(buf), "botany: Lv%u, Xp: %u", P->Cl[PLEVEL_BOTANY], P->S[PLEVEL_BOTANY]);
+  snprintf(buf, sizeof(buf), "lighting mode: %s", lightmode ? (lightmode == 2 ? "DAYLIGHT" : "NIGHTLIGHT") : "FULLBRIGHT");
   drawtxtwshadow(&hudfont, 10, 30+hudfont.ascent, buf);
+  snprintf(buf, sizeof(buf), "fps: %3.0f", nowfps);
+  drawtxtwshadow(&hudfont, 10, 50+hudfont.ascent, buf);
+  snprintf(buf, sizeof(buf), "botany: Lv%u, Xp: %u", P->Cl[PLEVEL_BOTANY], P->S[PLEVEL_BOTANY]);
+  drawtxtwshadow(&hudfont, 10, 70+hudfont.ascent, buf);
   if (promptvisible) {
     if (!(ntrctisactive())) {
       snprintf(buf, sizeof(buf), "[E] %s", promptlabel);

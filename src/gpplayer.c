@@ -141,6 +141,7 @@ playerbuildup(const char *meshfp) {
   /* TODO: When this fails to load, 0 gets passed to drawm and then segfault.
    * We need a way to fail loudly... */
   P->view = buildupcam(0, 3, 5, 0, 0, 0, CAMERA_FREECAM);
+  P->view->cm = CAMERA_FOLLOW;
   /* P->x = P->y = P->z = 0; */
   P->x = P->z = 0; P->y = 3;
   P->pitch = 0; P->yaw = 0; P->pitch = 0;
