@@ -8,6 +8,7 @@ extern const float TERRAIN_SPACING;
 
 struct Terrainvertex {
   float x,y,z;
+  float nx,ny,nz;
 };
 struct Tvfieldtri {
   struct Terrainvertex a,b,c;

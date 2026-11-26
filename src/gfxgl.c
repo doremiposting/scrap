@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "gfxgl.h"
@@ -16,9 +17,12 @@
 Mesh *tp;
 Visent *box;
 Visent *tree;
+Mesh *lanternmesh;
+Visent *lamppost;
 int wiremesh;
 int animate;
 int showcoll;
+int lightmode;
 int scrw, scrh;
 TTFAtlas hudfont;
 
@@ -35,12 +39,25 @@ TTFAtlas hudfont;
 #define INVICONSZ 32.0f
 #define INVROWGAP 6.0f
 
+#define LANTERNSIDEX 0.35f
+#define LANTERNSIDEY -0.6f
+#define LANTERNSIDEZ 0.05f
+#define LAMPPOSTX 4.0f
+#define LAMPPOSTY 0.0f
+#define LAMPPOSTZ 3.0f
+#define LAMPBULBOFFX 0.0f
+#define LAMPBULBOFFY 2.6f
+#define LAMPBULBOFFZ 0.0f
+
 typedef enum { BAR_FILL, BAR_DRAIN } Bardir;
 
 static int promptvisible;
 static float promptsx, promptsy;
 static const char *promptlabel;
 static char pickupbuf[64];
+
+static const GLfloat sundir[4] = { 0.3f, -1.0f, 0.2f, 0.0f };
+static const GLfloat lightorigin[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 #define updateclamp(x) \
   do { \
@@ -81,6 +98,11 @@ dropselecteditem() {
   }
 }
 
+void
+cyclelighting() {
+  lightmode = (lightmode + 1) % 3;
+}
+
 static int
 worldtoscreen(float wx, float wy, float wz, float *sx, float *sy) {
   GLdouble mv[16], proj[16];
@@ -102,9 +124,19 @@ worldtoscreen(float wx, float wy, float wz, float *sx, float *sy) {
 
 void
 glinit() {
+  GLint maxlights;
+  const GLfloat lanterncol[4] = { 1.0f, 0.85f, 0.5f, 1.0f };
+  const GLfloat lampcol[4] = { 0.95f, 0.95f, 0.85f, 1.0f };
+  const GLfloat suncol[4] = { 1.0f, 0.98f, 0.9f, 1.0f };
+  const GLfloat dimambient[4] = { 0.05f, 0.05f, 0.08f, 1.0f };
+  glGetIntegerv(GL_MAX_LIGHTS, &maxlights);
+  fprintf(stderr, "Max lights: %u\n", maxlights);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
+  glEnable(GL_NORMALIZE);
+  glEnable(GL_COLOR_MATERIAL);
+  glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
   tp = loadobj("assets/teapot.obj");
   if (!loadxpcurve("assets/xpcurve.def")) {
     fprintf(stderr, "glinit: xp curve load reported failure (used fallback)\n");
@@ -129,6 +161,27 @@ glinit() {
   tree->shape.offy = 2.0f;
   tree->shape.offz = 0.0f;
   regstatic(tree);
+  lanternmesh = loadobj("assets/badlantern.obj");
+  lamppost = newnttfrommesh(loadobj("assets/badlamp.obj"));
+  nttmove2(lamppost, LAMPPOSTX, LAMPPOSTY, LAMPPOSTZ);
+  lamppost->shape.kind = SHAPE_AABB;
+  lamppost->shape.aabb.hx = 0.15f;
+  lamppost->shape.aabb.hy = 1.5f;
+  lamppost->shape.aabb.hz = 0.15f;
+  lamppost->shape.offy = 1.5f;
+  regstatic(lamppost);
+  glLightfv(GL_LIGHT1, GL_DIFFUSE, lanterncol);
+  glLightfv(GL_LIGHT1, GL_SPECULAR, lanterncol);
+  glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
+  glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.2f);
+  glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.3f);
+  glLightfv(GL_LIGHT2, GL_DIFFUSE, lampcol);
+  glLightfv(GL_LIGHT2, GL_SPECULAR, lampcol);
+  glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
+  glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.07f);
+  glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.04f);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, suncol);
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, dimambient);
   if (!itemloadtable("assets/items.def", PACKID_BASE)) {
     fprintf(stderr, "glinit: failed to load item definitions\n");
   }
@@ -145,6 +198,9 @@ void
 glkill() {
   terrteardown();
   ttffreeatlas(&hudfont);
+  unregstatic(lamppost);
+  killntt(lamppost);
+  killmesh(lanternmesh);
   unregstatic(tree);
   killntt(tree);
   unregstatic(box);
@@ -166,16 +222,24 @@ glreshape(int width, int height) {
 void
 drawmesh(const Mesh *m) {
   glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_NORMAL_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(Vertex), m->v);
+  glNormalPointer(GL_FLOAT, sizeof(Vertex),
+      (const char *)m->v + offsetof(Vertex, nx));
   glDrawElements(GL_TRIANGLES, (int)m->idxc, GL_UNSIGNED_INT, m->idx);
+  glDisableClientState(GL_NORMAL_ARRAY);
   glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void
 drawterrain() {
   glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_NORMAL_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(TV), tvfield);
+  glNormalPointer(GL_FLOAT, sizeof(TV),
+      (const char *)tvfield + offsetof(TV, nx));
   glDrawElements(GL_TRIANGLES, (int)triiacnt, GL_UNSIGNED_INT, triia);
+  glDisableClientState(GL_NORMAL_ARRAY);
   glDisableClientState(GL_VERTEX_ARRAY);
 }
 
@@ -207,6 +271,7 @@ drawcollview() {
   float fx, fy, fz;
   glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
   glDisable(GL_DEPTH_TEST);
+  glDisable(GL_LIGHTING);
   if (P->shape.kind == SHAPE_AABB) {
     glColor3f(0.0f, 1.0f, 0.0f);
     drawaabb(P->x + P->shape.offx, P->y + P->shape.offy,
@@ -336,6 +401,7 @@ drawhud() {
   glPushMatrix();
   glLoadIdentity();
   glDisable(GL_DEPTH_TEST);
+  glDisable(GL_LIGHTING);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   snprintf(buf, sizeof(buf), "collision view: %s", showcoll ? "ON" : "OFF");
   drawtxtwshadow(&hudfont, 10, 10+hudfont.ascent, buf);
@@ -392,6 +458,19 @@ render() {
   glRotatef(P->view->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
   glRotatef(P->view->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
   glTranslatef(-P->view->x, -P->view->y, -P->view->z);
+  if (lightmode == LIGHT_FULLBRIGHT) {
+    glDisable(GL_LIGHTING);
+  } else {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHT2);
+    glLightfv(GL_LIGHT0, GL_POSITION, sundir);
+    if (lightmode == LIGHT_DAY) {
+      glEnable(GL_LIGHT0);
+    } else {
+      glDisable(GL_LIGHT0);
+    }
+  }
   promptvisible = ntrctprompt(&promptntt, &promptlabel);
   if (promptvisible) {
     promptvisible = worldtoscreen(promptntt->x,
@@ -420,6 +499,14 @@ render() {
   glRotatef(P->pitch * (float)(180/M_PI), 1.0f, 0.0f, 0.0f);
   glRotatef(P->yaw * (float)(180/M_PI), 0.0f, 1.0f, 0.0f);
   glRotatef(P->roll * (float)(180/M_PI), 0.0f, 0.0f, 1.0f);
+  if (lightmode != LIGHT_FULLBRIGHT) {
+    glPushMatrix();
+    glTranslatef(LANTERNSIDEX, LANTERNSIDEY, LANTERNSIDEZ);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightorigin);
+    glColor3f(0.5f, 0.45f, 0.3f);
+    drawmesh(lanternmesh);
+    glPopMatrix();
+  }
   drawmesh(P->m);
   if (wiremesh) {
     glColor3f(0,0,0);
@@ -448,6 +535,23 @@ render() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawmesh(tree->m);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+  glPopMatrix();
+  glPushMatrix();
+  glColor3f(0.2f, 0.2f, 0.22f);
+  glTranslatef(lamppost->x, lamppost->y, lamppost->z);
+  drawmesh(lamppost->m);
+  if (wiremesh) {
+    glColor3f(0,0,0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawmesh(lamppost->m);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+  if (lightmode != LIGHT_FULLBRIGHT) {
+    glPushMatrix();
+    glTranslatef(LAMPBULBOFFX, LAMPBULBOFFY, LAMPBULBOFFZ);
+    glLightfv(GL_LIGHT2, GL_POSITION, lightorigin);
+    glPopMatrix();
   }
   glPopMatrix();
   for (wi = 0; wi < worlditemcnt(); wi++) {

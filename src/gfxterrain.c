@@ -4,12 +4,6 @@
 #endif
 #include <math.h>
 
-struct Terrainvertex {
-  float x,y,z;
-};
-struct Tvfieldtri {
-  struct Terrainvertex a,b,c;
-};
 #include "gfxterrain.h"
 const int TERRAIN_WIDTH = 128;
 const int TERRAIN_HEIGHT = 128;
@@ -27,6 +21,17 @@ terrainheight(int x, int y) {
 float
 terrainheightf(float x, float y) {
   return (sinf((float)x*0.1f) * cosf((float)y*0.1f));
+}
+
+
+static void
+terrainnormalat(int i, int j, float *nx, float *ny, float *nz) {
+  float dhdx, dhdz, len;
+  dhdx = -0.1f * sinf((float)i*0.1f) * sinf((float)j*0.1f);
+  dhdz = 0.1f * cosf((float)i*0.1f) * cosf((float)j*0.1f);
+  *nx = -dhdx; *ny = 1.0f; *nz = -dhdz;
+  len = sqrtf((*nx)*(*nx) + (*ny)*(*ny) + (*nz)*(*nz));
+  *nx /= len; *ny /= len; *nz /= len;
 }
 
 TV *
@@ -58,6 +63,10 @@ buildtvs() {
       tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].x = (float)j*TERRAIN_SPACING;
       tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].z = (float)i*TERRAIN_SPACING;
       tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].y = terrainheight(i, j);
+      terrainnormalat(i, j,
+          &tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].nx,
+          &tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].ny,
+          &tvfield[(i+TERRAIN_HEIGHT)*TERRAIN_STRIDE + (j+TERRAIN_WIDTH)].nz);
     }
   }
 }

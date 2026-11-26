@@ -9,9 +9,15 @@ enum {
   ROTATE,
   ZOOM
 };
+enum {
+  LIGHT_FULLBRIGHT = 0,
+  LIGHT_NIGHT,
+  LIGHT_DAY
+};
 extern int wiremesh;
 extern int animate;
 extern int showcoll;
+extern int lightmode;
 extern int scrw, scrh;
 extern TTFAtlas hudfont;
 extern float ctl[3];
@@ -24,4 +30,5 @@ void drawmesh(const Mesh *m);
 void render();
 
 void dropselecteditem();
+void cyclelighting();
 #endif /* GFXGL_H */

@@ -83,8 +83,9 @@ x11init() {
   fprintf(stderr, "GL Renderer: %s\n" "GL version: %s\n",
     glGetString(GL_RENDERER), glGetString(GL_VERSION));
   animate = 1;
-  wiremesh = 1;
+  wiremesh = 0;
   showcoll = 0;
+  lightmode = LIGHT_FULLBRIGHT;
   perfstat = 1;
   glinit();
   GETNS(tthen); GETNS(tnow); GETNS(thenr); GETNS(nowr); GETNS(frmst); GETNS(frmend);
@@ -152,6 +153,9 @@ main(int argc, char *argv[]) {
               break;
             case 'v':
               showcoll = !showcoll;
+              break;
+            case 'l':
+              cyclelighting();
               break;
             case 'q':
             case XK_Escape:
