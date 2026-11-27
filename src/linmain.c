@@ -84,7 +84,7 @@ x11init() {
   fprintf(stderr, "GL Renderer: %s\n" "GL version: %s\n",
     glGetString(GL_RENDERER), glGetString(GL_VERSION));
   animate = 1;
-  wiremesh = 0;
+  wiremesh = 1;
   showcoll = 0;
   lightmode = LIGHT_DAY;
   perfstat = 1;

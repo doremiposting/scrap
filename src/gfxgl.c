@@ -41,15 +41,14 @@ extern double nowfps;
 #define INVICONSZ 32.0f
 #define INVROWGAP 6.0f
 
-#define LANTERNSIDEX 0.35f
-#define LANTERNSIDEY -0.6f
-#define LANTERNSIDEZ 0.05f
+#define LANTERNSIDEX 0.9f
+#define LANTERNSIDEY 0.0f
+#define LANTERNSIDEZ 0.1f
 #define LAMPPOSTX 4.0f
-#define LAMPPOSTY 0.0f
 #define LAMPPOSTZ 3.0f
-#define LAMPBULBOFFX 0.0f
-#define LAMPBULBOFFY 2.6f
-#define LAMPBULBOFFZ 0.0f
+#define LAMPBULBOFFX 1.6f
+#define LAMPBULBOFFY 3.55f
+#define LAMPBULBOFFZ -4.68f
 
 typedef enum { BAR_FILL, BAR_DRAIN } Bardir;
 
@@ -58,8 +57,10 @@ static float promptsx, promptsy;
 static const char *promptlabel;
 static char pickupbuf[64];
 
-static const GLfloat sundir[4] = { 0.3f, -1.0f, 0.2f, 0.0f };
+static const GLfloat sundir[4] = { 0.45f, 0.85f, 0.25f, 0.0f };
 static const GLfloat lightorigin[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+static const GLfloat nightambient[4] = { 0.04f, 0.04f, 0.06f, 1.0f };
+static const GLfloat dayambient[4] = { 0.35f, 0.35f, 0.32f, 1.0f };
 
 #define updateclamp(x) \
   do { \
@@ -127,10 +128,10 @@ worldtoscreen(float wx, float wy, float wz, float *sx, float *sy) {
 void
 glinit() {
   GLint maxlights;
+  float footoff;
   const GLfloat lanterncol[4] = { 1.0f, 0.85f, 0.5f, 1.0f };
   const GLfloat lampcol[4] = { 0.95f, 0.95f, 0.85f, 1.0f };
   const GLfloat suncol[4] = { 1.0f, 0.98f, 0.9f, 1.0f };
-  const GLfloat dimambient[4] = { 0.05f, 0.05f, 0.08f, 1.0f };
   glGetIntegerv(GL_MAX_LIGHTS, &maxlights);
   fprintf(stderr, "Max lights: %u\n", maxlights);
   glEnable(GL_DEPTH_TEST);
@@ -165,12 +166,13 @@ glinit() {
   regstatic(tree);
   lanternmesh = loadobj("assets/badlantern.obj");
   lamppost = newnttfrommesh(loadobj("assets/badlamp.obj"));
-  nttmove2(lamppost, LAMPPOSTX, LAMPPOSTY, LAMPPOSTZ);
+  footoff = meshfootoffset(lamppost->m);
+  nttmove2(lamppost, LAMPPOSTX, footoff, LAMPPOSTZ);
   lamppost->shape.kind = SHAPE_AABB;
-  lamppost->shape.aabb.hx = 0.15f;
-  lamppost->shape.aabb.hy = 1.5f;
-  lamppost->shape.aabb.hz = 0.15f;
-  lamppost->shape.offy = 1.5f;
+  lamppost->shape.aabb.hx = 0.36f;
+  lamppost->shape.aabb.hy = footoff;
+  lamppost->shape.aabb.hz = 0.36f;
+  lamppost->shape.offy = footoff;
   regstatic(lamppost);
   glLightfv(GL_LIGHT1, GL_DIFFUSE, lanterncol);
   glLightfv(GL_LIGHT1, GL_SPECULAR, lanterncol);
@@ -183,7 +185,6 @@ glinit() {
   glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.07f);
   glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.04f);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, suncol);
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, dimambient);
   if (!itemloadtable("assets/items.def", PACKID_BASE)) {
     fprintf(stderr, "glinit: failed to load item definitions\n");
   }
@@ -473,8 +474,10 @@ render() {
     glLightfv(GL_LIGHT0, GL_POSITION, sundir);
     if (lightmode == LIGHT_DAY) {
       glEnable(GL_LIGHT0);
+      glLightModelfv(GL_LIGHT_MODEL_AMBIENT, dayambient);
     } else {
       glDisable(GL_LIGHT0);
+      glLightModelfv(GL_LIGHT_MODEL_AMBIENT, nightambient);
     }
   }
   promptvisible = ntrctprompt(&promptntt, &promptlabel);
