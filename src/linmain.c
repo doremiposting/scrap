@@ -10,6 +10,7 @@
 #include <GL/glext.h>
 
 #include "gfxgl.h"
+#include "sfxal.h"
 #include "event.h"
 #include "gpplayer.h"
 #include "gpchar.h"
@@ -89,6 +90,7 @@ x11init() {
   lightmode = LIGHT_DAY;
   perfstat = 1;
   glinit();
+  alinit();
   GETNS(tthen); GETNS(tnow); GETNS(thenr); GETNS(nowr); GETNS(frmst); GETNS(frmend);
   XFree(vi);
 }
@@ -96,6 +98,7 @@ x11init() {
 void
 x11kill() {
   glkill();
+  alkill();
   glXMakeCurrent(display, None, NULL);
   glXDestroyContext(display, glc);
   XDestroyWindow(display, window);
@@ -180,6 +183,10 @@ main(int argc, char *argv[]) {
               break;
             case 'd':
               setevent(D_HELD, 1);
+              break;
+            case 'g':
+              /* XXX: Temporary openal test */
+              playtesttone(440.0f, 0.3f);
               break;
             case 'e':
               if (!ntrctisactive() && pickupnearest()) {

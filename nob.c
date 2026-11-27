@@ -105,6 +105,12 @@ main(int argc, char *argv[]) {
   cmd_append(&cmd, "-lGLX");
   compilefile("src/gfxterrain.c", "build/gfxterrain.o");
 
+  boilerplate();
+#if defined(__APPLE__)
+  cmd_append(&cmd, "-I/opt/homebrew/opt/openal-soft/include");
+#endif
+  compilefile("src/sfxal.c", "build/sfxal.o");
+
 #if defined(__linux__)
   boilerplate();
   cmd_append(&cmd, "-lX11");
@@ -114,12 +120,13 @@ main(int argc, char *argv[]) {
 #if defined(__linux__)
 	cmd_append(&cmd, CC, "-g", "-fPIE", "-pie", "-o", "scrap",
     "-lX11", "-L/opt/X11/lib/", "-lm", "-lGL", "-lGLX", "-lGLU",
+    "-lopenal",
    /* "-lasound", "-lmpg123", "-lpthread", */
     "build/gfxgl.o", "build/event.o", "build/gpplayer.o", "build/gfxobj.o", "build/gpchar.o",
     "build/gfxterrain.o", "build/linmain.o", "build/gfxprim.o", "build/gpcoll.o",
     "build/gfxttf.o", "build/gpinteractable.o", "build/gpsave.o",
     "build/gptable.o", "build/gpinventory.o", "build/gfxtex.o",
-    "build/gpworldspawn.o"
+    "build/gpworldspawn.o", "build/sfxal.o"
     );
 	if (!cmd_run(&cmd)) { return 1; }
 #elif defined(__APPLE__)

@@ -25,6 +25,7 @@ int showcoll;
 int lightmode;
 int scrw, scrh;
 TTFAtlas hudfont;
+static int worldlightslots;
 
 extern double nowfps;
 
@@ -106,6 +107,18 @@ cyclelighting() {
   lightmode = (lightmode + 1) % 3;
 }
 
+static void
+claimlightslot(const char *what, GLint maxlights) {
+  worldlightslots++;
+  if (worldlightslots > maxlights - 1) {
+    fprintf(stderr,
+        "lighting: \"%s\" is light #%d, out of GL_LIGHTn slots "
+        "(driver allows %d, one reserved for sun). Time for dynamic "
+        "nearest-light binding refactor.\n",
+        what, worldlightslots, maxlights);
+  }
+}
+
 static int
 worldtoscreen(float wx, float wy, float wz, float *sx, float *sy) {
   GLdouble mv[16], proj[16];
@@ -172,18 +185,20 @@ glinit() {
   lamppost->shape.aabb.hx = 0.36f;
   lamppost->shape.aabb.hy = footoff;
   lamppost->shape.aabb.hz = 0.36f;
-  lamppost->shape.offy = footoff;
+  lamppost->shape.offy = 0.0f;
   regstatic(lamppost);
   glLightfv(GL_LIGHT1, GL_DIFFUSE, lanterncol);
   glLightfv(GL_LIGHT1, GL_SPECULAR, lanterncol);
   glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
   glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.2f);
   glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.3f);
+  claimlightslot("lantern", maxlights);
   glLightfv(GL_LIGHT2, GL_DIFFUSE, lampcol);
   glLightfv(GL_LIGHT2, GL_SPECULAR, lampcol);
   glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
   glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.07f);
   glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.04f);
+  claimlightslot("lamppost", maxlights);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, suncol);
   if (!itemloadtable("assets/items.def", PACKID_BASE)) {
     fprintf(stderr, "glinit: failed to load item definitions\n");
